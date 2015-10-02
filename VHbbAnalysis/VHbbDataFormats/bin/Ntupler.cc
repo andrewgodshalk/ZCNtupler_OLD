@@ -393,6 +393,13 @@ struct  LeptonInfo
       id80[i]=-99; id95[i]=-99; vbtf[i]=-99; id80NoIso[i]=-99;
       charge[i]=-99;wp70[i]=-99; wp80[i]=-99;wp85[i]=-99;wp90[i]=-99;wp95[i]=-99;wpHWW[i]=-99;
       pfCorrIso[i]=-99.; id2012tight[i]=-99; idMVAnotrig[i]=-99; idMVAtrig[i]=-99;innerHits[i]=-99.,pfCorrIsoHCP[i]=-99.;
+      tIso      [i]=-99.;
+      eIso      [i]=-99.;
+      hIso      [i]=-99.;
+      pfChaIso  [i]=-99.;
+      pfChaPUIso[i]=-99.;
+      pfPhoIso  [i]=-99.;
+      pfNeuIso  [i]=-99.;
 
       decayModeFinding[i] =-99.;
       byLooseCombinedIsolationDeltaBetaCorr[i] =-99.;
@@ -449,6 +456,14 @@ struct  LeptonInfo
       genPhi[j]=i.mcFourMomentum.Phi();
     }
     setSpecific(i,j,aux);
+    tIso      [j]=i.tIso;
+    eIso      [j]=i.eIso;
+    hIso      [j]=i.hIso;
+    pfChaIso  [j]=i.pfChaIso;
+    pfChaPUIso[j]=i.pfChaPUIso;
+    pfPhoIso  [j]=i.pfPhoIso;
+    pfNeuIso  [j]=i.pfNeuIso;
+
   }
   
   template <class Input> void setSpecific(const Input & i, int j,const VHbbEventAuxInfo & aux) {}      
@@ -489,6 +504,13 @@ struct  LeptonInfo
   float wpHWW[MAXL];
   float innerHits[MAXL]; 
   float photonIsoDoubleCount[MAXL];
+  float tIso      [MAXL];
+  float eIso      [MAXL];
+  float hIso      [MAXL];
+  float pfChaIso  [MAXL];
+  float pfChaPUIso[MAXL];
+  float pfPhoIso  [MAXL];
+  float pfNeuIso  [MAXL];
 
   float decayModeFinding[MAXL],byLooseCombinedIsolationDeltaBetaCorr[MAXL],againstMuonTight[MAXL],againstElectronLoose[MAXL],againstElectronMedium[MAXL],againstElectronMVA[MAXL];
   int NsignalPFChargedHadrCands[MAXL], NsignalPFGammaCands[MAXL];
@@ -2324,10 +2346,10 @@ int main(int argc, char* argv[])
       MET.phi = vhCand.V.mets.at(0).p4.Phi();
       MET.sumet = vhCand.V.mets.at(0).sumEt;
       MET.sig = vhCand.V.mets.at(0).metSig;
-      pfMET.et    = iEvent.pfmet.p4.Pt();
-      pfMET.phi   = iEvent.pfmet.p4.Phi();
-      pfMET.sumet = iEvent.pfmet.sumEt;
-      pfMET.sig   = iEvent.pfmet.metSig;
+      pfMET.et    = iEvent->pfmet.p4.Pt();
+      pfMET.phi   = iEvent->pfmet.p4.Phi();
+      pfMET.sumet = iEvent->pfmet.sumEt;
+      pfMET.sig   = iEvent->pfmet.metSig;
 
       fakeMET.sumet = 0;
       fakeMET.sig = 0;
