@@ -20,7 +20,9 @@ for ds in datasets :
     strListOfIncompletes = ""
   # For each job number, check if there is a finished product, and add the mess to a list if no product is present.
     for i in range(numJobs) :
-        if fileList.index("TestMuon_"+str(i)+".root") == -1 :
+        try:
+            fileList.index("TestMuon_"+str(i)+".root")
+        catch ValueError:
             listOfIncompleteJobs.append(i)
             strListOfIncompletes += str(i)+", "
   # Print the incomplete jobs
