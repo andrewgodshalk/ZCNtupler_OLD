@@ -1,0 +1,13 @@
+universe = vanilla
+Executable = condor_executable.sh
+Arguments = $(Process)
+Should_Transfer_Files = YES
+WhenToTransferOutput = ON_EXIT
+Transfer_Input_Files = ../zcntuplerFiles.tgz, ntuple_for_condor.py
+Output = zcntupler_$(Cluster)_$(Process).stdout
+Error = zcntupler_$(Cluster)_$(Process).stderr
+Log = zcntupler_$(Cluster)_$(Process).log
+notify_user = ${LOGNAME}@FNAL.GOV
++LENGTH="SHORT"
+x509userproxy = /tmp/x509up_u42382
+Queue 1

@@ -1,0 +1,12 @@
+universe = vanilla
+Executable = Ntupler
+Should_Transfer_Files = YES 
+WhenToTransferOutput = ON_EXIT
+Transfer_Input_Files = ntuple.py
+Output = condorNtupler_\$(Cluster)_\$(Process).stdout
+Error = condorNtupler_\$(Cluster)_\$(Process).stderr
+Log = condorNtupler_\$(Cluster)_\$(Process).log
+notify_user = ${LOGNAME}@FNAL.GOV
+Arguments = ntupler.py
++LENGTH="SHORT"
+Queue 2
