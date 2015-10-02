@@ -25,7 +25,7 @@ muonD_1500	483
 ttbar_had	922
 ttbar_lep	782
 ttbar_semi	1697
-WW		668
-WZ		670
-ZZ		659
+ww		668
+wz		670
+zz		659
 
