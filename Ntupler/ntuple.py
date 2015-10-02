@@ -127,6 +127,9 @@ process.Analyzer = cms.PSet(
         "HLT_LooseIsoPFTau35_Trk20_Prong1_v.*", #51
         "HLT_LooseIsoPFTau35_Trk20_Prong1_MET70_v.*", #52
         "HLT_LooseIsoPFTau35_Trk20_Prong1_MET75_v.*", #53
+        "HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v7", #54      2015-10-01 ADDED - Andrew Godshalk
+        "HLT_Mu17_Ele8_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v7", #55
+        "HLT_Mu7_Ele7_CaloIdT_CaloIsoVL_v5", #56
     ),
     isMC 		= cms.bool(True),
 #    isMC 		= cms.bool(False),

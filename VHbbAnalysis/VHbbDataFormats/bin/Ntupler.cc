@@ -783,6 +783,8 @@ typedef struct
     vtxE[i]= j.vtxP4.E();
     vtx3dL[i] = j.vtx3dL;
     vtx3deL[i] = j.vtx3deL;
+    vtxProb[i] = j.vtxProb;
+    ssvhe[i] = j.ssvhe  ;
     chf[i]=j.chargedHadronEFraction;
     nhf[i]  =j.neutralHadronEFraction;
     cef[i]  =j.chargedEmEFraction;
@@ -822,6 +824,12 @@ typedef struct
     puJetIdMva[i]=j.puJetIdMva; 
     charge[i]=j.charge;     
     jetArea[i]=j.jetArea;
+
+    vtxPosition_x[i]=j.vtxPosition.x();
+    vtxPosition_y[i]=j.vtxPosition.y();
+    vtxPosition_z[i]=j.vtxPosition.z();
+    tche[i]=j.tche;
+    tchp[i]=j.tchp;
   }
 
   bool jetId(int i)
@@ -847,7 +855,14 @@ typedef struct
       cosTheta[i]=-99; numTracksSV[i]=-99; chf[i]=-99; nhf[i]=-99; cef[i]=-99; nef[i]=-99; nch[i]=-99; nconstituents[i]=-99; flavour[i]=-99; isSemiLeptMCtruth[i]=-99; isSemiLept[i]=-99;      
       SoftLeptpdgId[i] = -99; SoftLeptIdlooseMu[i] = -99;  SoftLeptId95[i] =  -99;   SoftLeptPt[i] = -99;  SoftLeptdR[i] = -99;   SoftLeptptRel[i] = -99; SoftLeptRelCombIso[i] = -99;  
       genPt[i]=-99; genEta[i]=-99; genPhi[i]=-99; JECUnc[i]=-99; ptRaw[i]=-99.; ptLeadTrack[i]=-99.; puJetIdL[i]=-99; puJetIdM[i]=-99; puJetIdT[i]=-99; puJetIdMva[i]=-99; charge[i]=-99; jetArea[i]=-99; selectedTauDR[i] = -99.;
-    }
+      vtxPosition_x[i]=-99;
+      vtxPosition_y[i]=-99;
+      vtxPosition_z[i]=-99;
+      tche[i]=-99;
+      tchp[i]=-99;
+      vtxProb[i]=-99;
+      ssvhe  [i]=-99;
+	}
   }
 
   float pt[MAXJ];
@@ -897,6 +912,8 @@ typedef struct
   float vtxE[MAXJ];
   float vtx3dL [MAXJ];
   float vtx3deL[MAXJ];
+  float vtxProb[MAXJ];
+  float ssvhe  [MAXJ];
   bool id[MAXJ];
   float SF_CSVL[MAXJ];
   float SF_CSVM[MAXJ];
@@ -913,6 +930,11 @@ typedef struct
   float charge[MAXJ];
   float jetArea[MAXJ];
   float selectedTauDR[MAXJ];
+  float vtxPosition_x[MAXJ];
+  float vtxPosition_y[MAXJ];
+  float vtxPosition_z[MAXJ];
+  float tche[MAXJ];
+  float tchp[MAXJ];
 }
 JetInfo;
 
@@ -953,6 +975,7 @@ int main(int argc, char* argv[])
   LeptonInfo allMuons, allElectrons;
   int        nallJets = 0;
   int        nallMuons = 0, nallElectrons = 0;
+  METInfo    pfMET;
   //---------------------------------------//
 
   HiggsInfo H,SVH,SimBsH;
@@ -1333,7 +1356,7 @@ int main(int argc, char* argv[])
   _outTree->Branch("allJet_eta",			allJets.eta,				"eta[nallJets]/F");
   _outTree->Branch("allJet_phi",			allJets.phi,				"phi[nallJets]/F");
   _outTree->Branch("allJet_e",				allJets.e,					"e[nallJets]/F");
-  _outTree->Branch("allJet_jp",			allJets.jp, 				"jp[nallJets]/F");
+  _outTree->Branch("allJet_jp",			    allJets.jp, 				"jp[nallJets]/F");
   _outTree->Branch("allJet_jpb",			allJets.jpb, 				"jpb[nallJets]/F");
   _outTree->Branch("allJet_csv",			allJets.csv, 				"csv[nallJets]/F");
   _outTree->Branch("allJet_csv_nominal",	allJets.csv_nominal, 		"csv_nominal[nallJets]/F");
@@ -1377,13 +1400,21 @@ int main(int argc, char* argv[])
   _outTree->Branch("allJet_vtxMass",		allJets.vtxMass, 			"vtxMass[nallJets]/F");
   _outTree->Branch("allJet_vtx3dL",			allJets.vtx3dL, 			"vtx3dL[nallJets]/F");
   _outTree->Branch("allJet_vtx3deL",		allJets.vtx3deL,	 		"vtx3deL[nallJets]/F");
+  _outTree->Branch("allJet_vtxProb",        allJets.vtxProb,            "vtxProb[nallJets]/F");
+  _outTree->Branch("allJet_ssvhe",          allJets.ssvhe,              "ssvhe[nallJets]/F");
   _outTree->Branch("allJet_id",				allJets.id, 				"id[nallJets]/b");
   _outTree->Branch("allJet_SF_CSVL",		allJets.SF_CSVL, 			"SF_CSVL[nallJets]/b");
   _outTree->Branch("allJet_SF_CSVM",		allJets.SF_CSVM, 			"SF_CSVM[nallJets]/b");
   _outTree->Branch("allJet_SF_CSVT",		allJets.SF_CSVT, 			"SF_CSVT[nallJets]/b");
   _outTree->Branch("allJet_SF_CSVLerr",		allJets.SF_CSVLerr, 		"SF_CSVLerr[nallJets]/b");
   _outTree->Branch("allJet_SF_CSVMerr",		allJets.SF_CSVMerr, 		"SF_CSVMerr[nallJets]/b");
-  _outTree->Branch("allJet_SF_CSVTerr",		allJets.SF_CSVTerr, 		"SF_CSVTerr[nallJets]/b");
+  _outTree->Branch("allJet_SF_CSVTerr",     allJets.SF_CSVTerr,         "SF_CSVTerr[nallJets]/b");
+  _outTree->Branch("allJet_tche",           allJets.tche                "tche[nallJets]/F");
+  _outTree->Branch("allJet_tchp",           allJets.tchp                "tchp[nallJets]/F");
+  _outTree->Branch("allJet_vtxPosition_x",  allJets.vtxPosition_x       "vtxPosition_x[nallJets]/F");
+  _outTree->Branch("allJet_vtxPosition_y",  allJets.vtxPosition_y       "vtxPosition_y[nallJets]/F");
+  _outTree->Branch("allJet_vtxPosition_z",  allJets.vtxPosition_z       "vtxPosition_z[nallJets]/F");
+
 
   _outTree->Branch("nallMuons",    				&nallMuons,				"nallMuons/I"    );
   _outTree->Branch("allMuon_mass",				allMuons.mass,			"mass[nallMuons]/F");
@@ -1422,6 +1453,13 @@ int main(int argc, char* argv[])
   _outTree->Branch("allMuon_wp85",				allMuons.wp85,			"wp85[nallMuons]/F");
   _outTree->Branch("allMuon_wp80",				allMuons.wp80,			"wp80[nallMuons]/F");
   _outTree->Branch("allMuon_wp70",				allMuons.wp70,			"wp70[nallMuons]/F");
+  _outTree->Branch("allMuon_tIso"               allMuons.tIso      ,    "tIso[nallMuons]/F"       );
+  _outTree->Branch("allMuon_eIso"               allMuons.eIso      ,    "eIso[nallMuons]/F"       );
+  _outTree->Branch("allMuon_hIso"               allMuons.hIso      ,    "hIso[nallMuons]/F"       );
+  _outTree->Branch("allMuon_pfChaIso"           allMuons.pfChaIso  ,    "pfChaIso[nallMuons]/F"   );
+  _outTree->Branch("allMuon_pfChaPUIso"         allMuons.pfChaPUIso,    "pfChaPUIso[nallMuons]/F" );
+  _outTree->Branch("allMuon_pfPhoIso"           allMuons.pfPhoIso  ,    "pfPhoIso[nallMuons]/F"   );
+  _outTree->Branch("allMuon_pfNeuIso"           allMuons.pfNeuIso  ,    "pfNeuIso[nallMuons]/F"   );
 
   _outTree->Branch("nallElectrons",    			&nallElectrons,				"nallElectrons/I"    );
   _outTree->Branch("allElectron_mass",			allElectrons.mass,			"mass[nallElectrons]/F");
@@ -1459,7 +1497,15 @@ int main(int argc, char* argv[])
   _outTree->Branch("allElectron_wp90",			allElectrons.wp90,			"wp90[nallElectrons]/F");
   _outTree->Branch("allElectron_wp85",			allElectrons.wp85,			"wp85[nallElectrons]/F");
   _outTree->Branch("allElectron_wp80",			allElectrons.wp80,			"wp80[nallElectrons]/F");
-  _outTree->Branch("allElectron_wp70",			allElectrons.wp70,			"wp70[nallElectrons]/F");
+  _outTree->Branch("allElectron_wp70",          allElectrons.wp70,          "wp70[nallElectrons]/F");
+  _outTree->Branch("allElectron_tIso",          allElectrons.tIso,          "tIso[nallElectrons]/F");
+  _outTree->Branch("allElectron_eIso",          allElectrons.eIso,          "eIso[nallElectrons]/F");
+  _outTree->Branch("allElectron_hIso",          allElectrons.hIso,          "hIso[nallElectrons]/F");
+  _outTree->Branch("allElectron_pfChaIso",      allElectrons.pfChaIso,      "pfChaIso[nallElectrons]/F");
+  _outTree->Branch("allElectron_pfChaPUIso",    allElectrons.pfChaPUIso,    "pfChaPUIso[nallElectrons]/F");
+  _outTree->Branch("allElectron_pfPhoIso",      allElectrons.pfPhoIso,      "pfPhoIso[nallElectrons]/F");
+  _outTree->Branch("allElectron_pfNeuIso",      allElectrons.pfNeuIso,      "pfNeuIso[nallElectrons]/F");
+
   // ------------------------------------------------------------------//
   
   
@@ -1711,7 +1757,8 @@ int main(int argc, char* argv[])
   _outTree->Branch("nPVs"		,  &nPVs	         ,   "nPVs/I");
   _outTree->Branch("METnoPU"		,  &METnoPU	         ,   "et/F:sumet:sig/F:phi/F");
   _outTree->Branch("METnoPUCh"		,  &METnoPUCh	         ,   "et/F:sumet:sig/F:phi/F");
-  _outTree->Branch("MET"		,  &MET	         ,   "et/F:sumet:sig/F:phi/F");
+  _outTree->Branch("MET"        ,  &MET          ,   "et/F:sumet:sig/F:phi/F");
+  _outTree->Branch("pfMET"        ,  &pfMET          ,   "et/F:sumet:sig/F:phi/F");
   _outTree->Branch("METtype1corr"		,  &METtype1corr	         ,   "et/F:sumet:sig/F:phi/F");
   _outTree->Branch("METtype1p2corr"		,  &METtype1p2corr	         ,   "et/F:sumet:sig/F:phi/F");
   _outTree->Branch("METnoPUtype1corr"		,  &METnoPUtype1corr	         ,   "et/F:sumet:sig/F:phi/F");
@@ -2277,6 +2324,10 @@ int main(int argc, char* argv[])
       MET.phi = vhCand.V.mets.at(0).p4.Phi();
       MET.sumet = vhCand.V.mets.at(0).sumEt;
       MET.sig = vhCand.V.mets.at(0).metSig;
+      pfMET.et    = iEvent.pfmet.p4.Pt();
+      pfMET.phi   = iEvent.pfmet.p4.Phi();
+      pfMET.sumet = iEvent.pfmet.sumEt;
+      pfMET.sig   = iEvent.pfmet.metSig;
 
       fakeMET.sumet = 0;
       fakeMET.sig = 0;
