@@ -15,17 +15,17 @@ for ds in datasets :
     dirName = "condor_runDir_"+ds[0]
   # Create a list of job
     fileList = listdir(dirName)
-    fileList = [ item for item in fileList if not item.startswith("TestMuon_")]
+    fileList = [ item for item in fileList if item.startswith("TestMuon_")]
     listOfIncompleteJobs = []
     strListOfIncompletes = ""
   # For each job number, check if there is a finished product, and add the mess to a list if no product is present.
     for i in range(numJobs) :
         try:
             fileList.index("TestMuon_"+str(i)+".root")
-        catch ValueError:
+        except ValueError:
             listOfIncompleteJobs.append(i)
             strListOfIncompletes += str(i)+", "
   # Print the incomplete jobs
-    print dr[0]+": "+str(listOfIncompleteJobs.length())+" of "+dr[1]+" jobs processed. Incompletes: "+strListOfIncompletes
+    print ds[0]+": "+str(len(listOfIncompleteJobs))+" of "+str(numJobs)+" jobs processed. Incompletes: "+strListOfIncompletes
 
 
