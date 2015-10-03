@@ -8,25 +8,6 @@ THE_STRINGS = [
   "Segmentation fault      ./Ntupler ntuple_for_condor.py",
 ]
 
-
-def findAndReplaceLineInFile(fileName, oldLine, newLine):
-  # Open file, read in lines
-    fileToMod = open(fileName, 'r')
-    fileLines = fileToMod.readlines()
-    fileToMod.close()
-  # Find the line in question
-    iToMod = fileLines.index(oldLine)
-    #print iToMod
-  # Change line to appropriate True/False
-    fileLines[iToMod] = newLine
-  # Read all lines out to a new file.
-    fileToMod = open(fileName, 'w')
-    for line in fileLines :
-        fileToMod.write(line)
-    fileToMod.close()
-
-
-
 # Get list of datasets
 countFile = open('formattedFileLists/file_counts_per_list.txt', 'r')
 datasets = []
@@ -48,7 +29,7 @@ for ds in datasets:
             if THE_STRING in open(dirName+"/"+errFile).read() :
               # Save the corresponding config file to a new folder.
                 jobNumber = errFile.split('_')[2].split('.')[0]
-                system("cp "+dirName+"/ntuple_job_"+jobNumber+".py condor_runDir_do-over/ntuple_job_"+ds+"_"+jobNumber+".py")
+                system("cp "+dirName+"/ntuple_job_"+jobNumber+".py "+redoDir+"/ntuple_job_"+ds+"_"+jobNumber+".py")
                 #system("cp "+dirName+"/"+errFile+" condor_runDir_do-over/"+ds+"_"+errFile)
                 break
 
@@ -65,4 +46,29 @@ configFileListFile.close()
 system("tar czv --file="+redoDir+"/configFiles.tgz --files-from="+redoDir+"/configFileList.txt")
 
 # Change final line of condor_config.script to show the correct number of jobs
-findAndReplaceLineInFile(redoDir+"/condor_config.script","Queue 1\n", "Queue "+str(len(fileList))+"\n")
+
+
+
+fileName = redoDir+"/condor_config.script"
+oldLinePart = "Queue"
+newLine = "Queue "+str(len(fileList))+"\n"
+
+# Open file, read in lines
+fileToMod = open(fileName, 'r')
+fileLines = fileToMod.readlines()
+fileToMod.close()
+
+# Find the line in question
+iToMod = -1
+for line in fileLines:
+    if line.startswith(oldLinePart) :
+        iToMod = fileLines.index(line)
+
+# Change line to appropriate True/False
+fileLines[iToMod] = newLine
+
+# Read all lines out to a new file.
+fileToMod = open(fileName, 'w')
+for line in fileLines :
+    fileToMod.write(line)
+fileToMod.close()
