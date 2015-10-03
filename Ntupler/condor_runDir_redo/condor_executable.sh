@@ -28,7 +28,7 @@ tar -zxf zcntuplerFiles.tgz
 tar -zxf configFiles.tgz
 
 # Set up variables to select files to run cmsRun, ZCAnalyzer over
-let jobNum=$1
+let jobNum=$1+1
 fileName=`sed -n "$jobNum p" < configFileList.txt`
 
 # Run the main process
@@ -38,4 +38,4 @@ fileName=`sed -n "$jobNum p" < configFileList.txt`
 rm Ntupler
 rm Cert_*
 rm btag_generic.txt
-mv ntuple_job_*.py
+rm ntuple_job_*.py

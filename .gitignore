@@ -1,6 +1,9 @@
 Ntupler/condor_runDir_*
 !Ntupler/condor_runDir_template
 !Ntupler/condor_runDir_redo
+Ntupler/condor_runDir_redo/configFileList.txt
+Ntupler/condor_runDir_redo/configFiles.tgz
+Ntupler/condor_runDir_redo/ntuple_job_*
 Ntupler/zcntuplerFiles.tgz
 Ntupler/Ntupler
 Ntupler/*_step2ntuples
