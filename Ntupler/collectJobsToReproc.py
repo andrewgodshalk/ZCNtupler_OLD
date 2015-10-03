@@ -8,13 +8,32 @@ THE_STRINGS = [
   "Segmentation fault      ./Ntupler ntuple_for_condor.py",
 ]
 
+
+def findAndReplaceLineInFile(fileName, oldLine, newLine):
+  # Open file, read in lines
+    fileToMod = open(fileName, 'r')
+    fileLines = fileToMod.readlines()
+    fileToMod.close()
+  # Find the line in question
+    iToMod = fileLines.index(oldLine)
+    #print iToMod
+  # Change line to appropriate True/False
+    fileLines[iToMod] = newLine
+  # Read all lines out to a new file.
+    fileToMod = open(fileName, 'w')
+    for line in fileLines :
+        fileToMod.write(line)
+    fileToMod.close()
+
+
+
 # Get list of datasets
 countFile = open('formattedFileLists/file_counts_per_list.txt', 'r')
 datasets = []
 for line in countFile :
     datasets.append(line.split()[0])
 
-system("mkdir condor_runDir_do-over")
+redoDir = "condor_runDir_redo"
 
 # In each direcotry...
 for ds in datasets:
@@ -32,3 +51,18 @@ for ds in datasets:
                 system("cp "+dirName+"/ntuple_job_"+jobNumber+".py condor_runDir_do-over/ntuple_job_"+ds+"_"+jobNumber+".py")
                 #system("cp "+dirName+"/"+errFile+" condor_runDir_do-over/"+ds+"_"+errFile)
                 break
+
+# Get list of config files to redo
+fileList = [item for item in listdir(redoDir) if item.startswith("ntuple_job_")]
+
+# Write list to file
+configFileListFile = open(redoDir+"/configFileList.txt", 'w')
+for fn in fileList :
+    configFileListFile.write(fn)
+configFileListFile.close()
+
+# Compress all files into a tar.
+system("tar czv --file="+redoDir+"/configFiles.tgz --files-from="+redoDir+"/configFileList.txt")
+
+# Change final line of condor_config.script to show the correct number of jobs
+findAndReplaceLineInFile(redoDir+"/condor_config.script","Queue 1\n", "Queue "+str(len(fileList))+"\n")
