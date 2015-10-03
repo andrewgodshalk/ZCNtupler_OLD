@@ -1,8 +1,12 @@
 
 from os import system
+from os import listdir
 
-# String to find
-THE_STRING = "Aborted                 ./Ntupler ntuple_for_condor.py"
+# Strings to find
+THE_STRINGS = [
+  "Aborted                 ./Ntupler ntuple_for_condor.py",
+  "Segmentation fault      ./Ntupler ntuple_for_condor.py",
+]
 
 # Get list of datasets
 countFile = open('formattedFileLists/file_counts_per_list.txt', 'r')
@@ -21,7 +25,10 @@ for ds in datasets:
     fileList = [ item for item in fileList if item.endswith(".stderr")]
   # If the file contains THE STRING...
     for errFile in fileList :
-        if THE_STRING in open(errFile).read() :
-          # Save the corresponding config file to a new folder.
-            jobNumber = errFile.split('_')[2].split('.')[0]
-            system("cp "+dirName+"/ntuple_job_"+jobNumber+".py condor_runDir_do-over/")
+	for THE_STRING in THE_STRINGS :
+            if THE_STRING in open(dirName+"/"+errFile).read() :
+              # Save the corresponding config file to a new folder.
+                jobNumber = errFile.split('_')[2].split('.')[0]
+                system("cp "+dirName+"/ntuple_job_"+jobNumber+".py condor_runDir_do-over/ntuple_job_"+ds+"_"+jobNumber+".py")
+                #system("cp "+dirName+"/"+errFile+" condor_runDir_do-over/"+ds+"_"+errFile)
+                break
