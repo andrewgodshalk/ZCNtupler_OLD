@@ -16,9 +16,9 @@ muonCv1_recover	51
 muonCv2-topoff	578
 muonCv2		1493
 muonD		1483
-ttbar_had	922
-ttbar_lep	782
-ttbar_semi	1697
+tthad		922
+ttlep		782
+ttsemi		1697
 ww		668
 wz		670
 zz		659

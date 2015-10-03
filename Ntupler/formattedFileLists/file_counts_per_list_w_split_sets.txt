@@ -22,9 +22,9 @@ muonCv2_1500	493
 muonD_0500	500
 muonD_1000	500
 muonD_1500	483
-ttbar_had	922
-ttbar_lep	782
-ttbar_semi	1697
+tthad		922
+ttlep		782
+ttsemi		1697
 ww		668
 wz		670
 zz		659
