@@ -1,0 +1,6 @@
+tbar_s		8
+tbar_t		20
+tbar_tw		29
+t_s		14
+t_t		36
+t_tw		25
