@@ -16,9 +16,15 @@ muonCv1_recover	51
 muonCv2-topoff	578
 muonCv2		1493
 muonD		1483
+tbar_s		8
+tbar_t		20
+tbar_tw		29
+t_s		14
+t_t		36
 tthad		922
 ttlep		782
 ttsemi		1697
+t_tw		25
 ww		668
 wz		670
 zz		659
