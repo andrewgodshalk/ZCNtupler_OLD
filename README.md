@@ -97,4 +97,9 @@ VHbbAnalysis/VHbbDataFormats/interface/
 -Changed Ntupler to run on newer, correct JSON file (files_to_tar, ntupler_for_condor.py
     in template folder)
 
+-2015-10-
+Added a *MESS* of scripts to help run the Ntupler, as well as a few extra data points to the Ntuples themselves.
+Full documentation of scripts and the process to come.
+
 ```
+

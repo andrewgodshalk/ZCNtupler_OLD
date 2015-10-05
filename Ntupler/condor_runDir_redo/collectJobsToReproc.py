@@ -1,4 +1,4 @@
-
+import sys
 from os import system
 from os import listdir
 
@@ -12,7 +12,7 @@ def FindLineInFileStartingWithAndReplaceWith(fileName,oldLineBeginning,newLine) 
     # Find the line in question
     iToMod = -1
     for line in fileLines:
-        if line.startswith(oldLinePart) :
+        if line.startswith(oldLineBeginning) :
            iToMod = fileLines.index(line)
     
     # Change line to appropriate True/False
@@ -39,8 +39,11 @@ THE_STRINGS = [
 # Get list of datasets
 countFile = open('../formattedFileLists/file_counts_per_list.txt', 'r')
 datasets = []
-for line in countFile :
-    datasets.append(line.split()[0])
+if len(sys.argv) > 1 :
+    datasets = sys.argv[1:]
+else :
+    for line in countFile :
+        datasets.append(line.split()[0])
 
 redoDir = "condor_runDir_redo"
 
@@ -60,6 +63,9 @@ for ds in datasets:
                 newFileName = "ntuple_job_"+ds+"_"+jobNumber+".py"
                 system("cp "+dirName+"/ntuple_job_"+jobNumber+".py "+newFileName)
                 #system("cp "+dirName+"/"+errFile+" "+ds+"_"+errFile)
+              # Remove the bad ntuple file for this job.
+                badNtupleFileName = "TestMuon_"+jobNumber+".root"
+                system("rm "+dirName+"/"+badNtupleFileName)
               # Change the output of the config file to something similar
                 FindLineInFileStartingWithAndReplaceWith(newFileName, "fname = 'Test' + channel +", "fname = 'Test' + channel + '_"+ds+"_"+jobNumber+".root'\n")
                 break

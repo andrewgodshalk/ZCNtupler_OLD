@@ -26,6 +26,6 @@ for ds in datasets :
             listOfIncompleteJobs.append(i)
             strListOfIncompletes += str(i)+", "
   # Print the incomplete jobs
-    print ds[0]+": "+str(len(listOfIncompleteJobs))+" of "+str(numJobs)+" jobs processed."
+    print ds[0]+": "+str(len(listOfIncompleteJobs))+" of "+str(numJobs)+" jobs not processed."
     if strListOfIncompletes != "": print "    Incompletes: "+strListOfIncompletes
 
