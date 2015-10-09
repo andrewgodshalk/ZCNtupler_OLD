@@ -50,6 +50,10 @@
 //trigger
 #include "VHbbAnalysis/VHbbDataFormats/interface/TriggerWeight.h"
 
+//Gen particles
+#include "DataFormats/Candidate/interface/Candidate.h"
+
+
 #include <sstream>
 #include <string>
 #include <fstream>
@@ -432,10 +436,11 @@ struct  LeptonInfo
       againstMuonLoose2[i] = -99.;
       againstMuonMedium2[i] = -99.;
       againstMuonTight2[i] = -99.;
+      doBelongToVhCand[i] = 0 ;
     }
   }
 
-  template <class Input> void set(const Input & i, int j,int t,const VHbbEventAuxInfo & aux)
+  template <class Input> void set(const Input & i, int j,int t, const VHbbEventAuxInfo & aux, int doBelongToVhCandIn)
   {
     type[j]=t;
     pt[j]=i.p4.Pt(); 
@@ -463,6 +468,7 @@ struct  LeptonInfo
     pfChaPUIso[j]=i.pfChaPUIso;
     pfPhoIso  [j]=i.pfPhoIso;
     pfNeuIso  [j]=i.pfNeuIso;
+    doBelongToVhCand[j] = doBelongToVhCandIn ;
 
   }
   
@@ -516,6 +522,7 @@ struct  LeptonInfo
   int NsignalPFChargedHadrCands[MAXL], NsignalPFGammaCands[MAXL];
   float leadPFChargedHadrCandPt[MAXL], byLooseIsolation[MAXL], byMediumIsolation[MAXL], byTightIsolation[MAXL]; 
   float byLooseCombinedIsolationDeltaBetaCorr3Hits[MAXL],  byMediumCombinedIsolationDeltaBetaCorr3Hits[MAXL], byTightCombinedIsolationDeltaBetaCorr3Hits[MAXL], againstElectronMVA3raw[MAXL], againstElectronMVA3category[MAXL], againstElectronLooseMVA3[MAXL], againstElectronMediumMVA3[MAXL], againstElectronTightMVA3[MAXL], againstElectronVTightMVA3[MAXL], againstElectronDeadECAL[MAXL], byLooseIsolationMVA[MAXL], byMediumIsolationMVA[MAXL], byTightIsolationMVA[MAXL], byLooseIsolationMVA2[MAXL], byMediumIsolationMVA2[MAXL], byTightIsolationMVA2[MAXL], againstMuonLoose2[MAXL], againstMuonMedium2[MAXL], againstMuonTight2[MAXL];
+  int doBelongToVhCand[MAXL] ;
 };
 
   
@@ -971,7 +978,9 @@ int main(int argc, char* argv[])
   SimBHadronInfo SimBs;
   float rho,rho25,rhoN;
   int nPVs;
-  METInfo MET;
+  int nPV1s; //nPV outside of VH cand
+  int nTruePUs ;  
+  METInfo MET; //pfmetType1corr
   METInfo fakeMET;
   METInfo METnoPU;
   METInfo METnoPUCh;
@@ -982,6 +991,8 @@ int main(int argc, char* argv[])
   METInfo METtype1diff;
   MHTInfo MHT;
   METUncInfo  metUnc;
+  METInfo aMET ; //MET outside VH candidate pfmetType1corr
+  METInfo apfMET ; //pfMET outside VH candidate same as Andrew
   TopInfo top;
   EventInfo EVENT;
   // JetInfo jet1,jet2, addJet1, addJet2;
@@ -999,6 +1010,8 @@ int main(int argc, char* argv[])
   int        nallMuons = 0, nallElectrons = 0;
   METInfo    pfMET;
   //---------------------------------------//
+  //--------INFO ADDED 2015-10-06----------//
+  int zdecayMode(0) ;
 
   HiggsInfo H,SVH,SimBsH;
   FatHiggsInfo FatH;
@@ -1257,15 +1270,15 @@ int main(int argc, char* argv[])
 
   _outTree->Branch("TkSharing", &TkSharing, "HiggsCSVtkSharing/b:HiggsIPtkSharing:HiggsSVtkSharing:FatHiggsCSVtkSharing:FatHiggsIPtkSharing:FatHiggsSVtkSharing");
 
-  _outTree->Branch("nhJets",	      &nhJets,		"nhJets/I");
-  _outTree->Branch("nfathFilterJets", &nfathFilterJets, "nfathFilterJets/I");
-  _outTree->Branch("naJets",  	      &naJets,  	"naJets/I");
-//  _outTree->Branch("nJets",  	      &nJets,		"nJets/I");
 
   _outTree->Branch("weightMCProd"             ,  &weightMCProd                 ,   "weightMCProd/F");
   _outTree->Branch("isBadHcalEvent"             ,  &isBadHcalEvent                 ,   "isBadHcalEvent/b");
 
-  _outTree->Branch("hJet_pt",hJets.pt ,"pt[nhJets]/F");
+  _outTree->Branch("nhJets",	      &nhJets,		"nhJets/I");
+  _outTree->Branch("nfathFilterJets", &nfathFilterJets, "nfathFilterJets/I");
+
+//===NOTE : don't save hJet and fathFilterJet=== Duong (10-9-2015)
+/*  _outTree->Branch("hJet_pt",hJets.pt ,"pt[nhJets]/F");
   _outTree->Branch("hJet_eta",hJets.eta ,"eta[nhJets]/F");
   _outTree->Branch("hJet_phi",hJets.phi ,"phi[nhJets]/F");
   _outTree->Branch("hJet_e",hJets.e ,"e[nhJets]/F");
@@ -1370,7 +1383,7 @@ int main(int argc, char* argv[])
   _outTree->Branch("fathFilterJets_nef",fathFilterJets.nef ,"nef[nfathFilterJets]/F");
   _outTree->Branch("fathFilterJets_nch",fathFilterJets.nch ,"nch[nfathFilterJets]/F");
   _outTree->Branch("fathFilterJets_id",fathFilterJets.id ,"id[nfathFilterJets]/b");
-
+*/
   
   // ------------------ ADDED BRANCHES FOR ALL JET, ALL LEPTON SETS ----------------------- //
   _outTree->Branch("nallJets",  	       	&nallJets,  				"nallJets/I");  
@@ -1529,13 +1542,81 @@ int main(int argc, char* argv[])
   _outTree->Branch("allElectron_pfNeuIso",      allElectrons.pfNeuIso,      "pfNeuIso[nallElectrons]/F");
 
   // ------------------------------------------------------------------//
-  
-  
+
+//===NOTE : for saving allJet outside of VH candidate (Duong 10-08-2015)=======
+ 
+  _outTree->Branch("naJets",  	       	&naJets,  				"naJets/I");  
+  _outTree->Branch("aJet_pt",				aJets.pt,					"pt[naJets]/F");
+  _outTree->Branch("aJet_eta",			aJets.eta,				"eta[naJets]/F");
+  _outTree->Branch("aJet_phi",			aJets.phi,				"phi[naJets]/F");
+  _outTree->Branch("aJet_e",				aJets.e,					"e[naJets]/F");
+  _outTree->Branch("aJet_jp",			    aJets.jp, 				"jp[naJets]/F");
+  _outTree->Branch("aJet_jpb",			aJets.jpb, 				"jpb[naJets]/F");
+  _outTree->Branch("aJet_csv",			aJets.csv, 				"csv[naJets]/F");
+  _outTree->Branch("aJet_csv_nominal",	aJets.csv_nominal, 		"csv_nominal[naJets]/F");
+  _outTree->Branch("aJet_csv_upBC",		aJets.csv_upBC, 			"csv_upBC[naJets]/F");
+  _outTree->Branch("aJet_csv_downBC",		aJets.csv_downBC, 		"csv_downBC[naJets]/F");
+  _outTree->Branch("aJet_csv_upL",		aJets.csv_upL, 			"csv_upL[naJets]/F");
+  _outTree->Branch("aJet_csv_downL",		aJets.csv_downL, 			"csv_downL[naJets]/F");
+  _outTree->Branch("aJet_csv_nominal4p",	aJets.csv_nominal4p, 		"csv_nominal4p[naJets]/F");
+  _outTree->Branch("aJet_csv_upBC4p",		aJets.csv_upBC4p, 		"csv_upBC4p[naJets]/F");
+  _outTree->Branch("aJet_csv_downBC4p",	aJets.csv_downBC4p, 		"csv_downBC4p[naJets]/F");
+  _outTree->Branch("aJet_csv_nominal1Bin",aJets.csv_nominal1Bin, 	"csv_nominal1Bin[naJets]/F");
+  _outTree->Branch("aJet_csvivf",			aJets.csvivf, 			"csvivf[naJets]/F");
+  _outTree->Branch("aJet_cmva",			aJets.cmva, 				"cmva[naJets]/F");
+  _outTree->Branch("aJet_cosTheta",		aJets.cosTheta, 			"cosTheta[naJets]/F");
+  _outTree->Branch("aJet_numTracksSV",	aJets.numTracksSV, 		"numTracksSV[naJets]/I");
+  _outTree->Branch("aJet_chf",			aJets.chf, 				"chf[naJets]/F");
+  _outTree->Branch("aJet_nhf",			aJets.nhf, 				"nhf[naJets]/F");
+  _outTree->Branch("aJet_cef",			aJets.cef, 				"cef[naJets]/F");
+  _outTree->Branch("aJet_nef",			aJets.nef, 				"nef[naJets]/F");
+  _outTree->Branch("aJet_nch",			aJets.nch, 				"nch[naJets]/F");
+  _outTree->Branch("aJet_nconstituents",	aJets.nconstituents,		"nconstituents[naJets]");
+  _outTree->Branch("aJet_flavour",		aJets.flavour, 			"flavour[naJets]/F");
+  _outTree->Branch("aJet_isSemiLept",		aJets.isSemiLept, 		"isSemiLept[naJets]/I");
+  _outTree->Branch("aJet_isSemiLeptMCtruth",	aJets.isSemiLeptMCtruth, 	"isSemiLeptMCtruth[naJets]/I");
+  _outTree->Branch("aJet_SoftLeptpdgId",	aJets.SoftLeptpdgId,  	"SoftLeptpdgId[naJets]/I");
+  _outTree->Branch("aJet_SoftLeptIdlooseMu", 	aJets.SoftLeptIdlooseMu,  	"SoftLeptIdlooseMu[naJets]/I");
+  _outTree->Branch("aJet_SoftLeptId95", 	aJets.SoftLeptId95, 		"SoftLeptId95[naJets]/I");
+  _outTree->Branch("aJet_SoftLeptPt", 	aJets.SoftLeptPt, 		"SoftLeptPt[naJets]/F");
+  _outTree->Branch("aJet_SoftLeptdR", 	aJets.SoftLeptdR, 		"SoftLeptdR[naJets]/F");
+  _outTree->Branch("aJet_SoftLeptptRel", 	aJets.SoftLeptptRel, 		"SoftLeptptRel[naJets]/F");
+  _outTree->Branch("aJet_SoftLeptRelCombIso", aJets.SoftLeptRelCombIso,  	"SoftLeptRelCombIso[naJets]/F");
+  _outTree->Branch("aJet_puJetIdL", 		aJets.puJetIdL,  			"puJetIdL[naJets]/F");
+  _outTree->Branch("aJet_puJetIdM", 		aJets.puJetIdM,  			"puJetIdM[naJets]/F");
+  _outTree->Branch("aJet_puJetIdT", 		aJets.puJetIdT,  			"puJetIdT[naJets]/F");
+  _outTree->Branch("aJet_puJetIdMva", 	aJets.puJetIdMva,  		"puJetIdMva[naJets]/F");
+  _outTree->Branch("aJet_charge",			aJets.charge, 			"charge[naJets]/F");
+  _outTree->Branch("aJet_genPt",			aJets.genPt, 				"genPt[naJets]/F");
+  _outTree->Branch("aJet_genEta",			aJets.genEta, 			"genEta[naJets]/F");
+  _outTree->Branch("aJet_genPhi",			aJets.genPhi, 			"genPhi[naJets]/F");
+  _outTree->Branch("aJet_JECUnc",			aJets.JECUnc, 			"JECUnc[naJets]/F");
+  _outTree->Branch("aJet_vtxMass",		aJets.vtxMass, 			"vtxMass[naJets]/F");
+  _outTree->Branch("aJet_vtx3dL",			aJets.vtx3dL, 			"vtx3dL[naJets]/F");
+  _outTree->Branch("aJet_vtx3deL",		aJets.vtx3deL,	 		"vtx3deL[naJets]/F");
+  _outTree->Branch("aJet_vtxProb",        aJets.vtxProb,            "vtxProb[naJets]/F");
+  _outTree->Branch("aJet_ssvhe",          aJets.ssvhe,              "ssvhe[naJets]/F");
+  _outTree->Branch("aJet_id",				aJets.id, 				"id[naJets]/b");
+  _outTree->Branch("aJet_SF_CSVL",		aJets.SF_CSVL, 			"SF_CSVL[naJets]/b");
+  _outTree->Branch("aJet_SF_CSVM",		aJets.SF_CSVM, 			"SF_CSVM[naJets]/b");
+  _outTree->Branch("aJet_SF_CSVT",		aJets.SF_CSVT, 			"SF_CSVT[naJets]/b");
+  _outTree->Branch("aJet_SF_CSVLerr",		aJets.SF_CSVLerr, 		"SF_CSVLerr[naJets]/b");
+  _outTree->Branch("aJet_SF_CSVMerr",		aJets.SF_CSVMerr, 		"SF_CSVMerr[naJets]/b");
+  _outTree->Branch("aJet_SF_CSVTerr",     aJets.SF_CSVTerr,         "SF_CSVTerr[naJets]/b");
+  _outTree->Branch("aJet_tche",           aJets.tche,               "tche[naJets]/F");
+  _outTree->Branch("aJet_tchp",           aJets.tchp,               "tchp[naJets]/F");
+  _outTree->Branch("aJet_vtxPosition_x",  aJets.vtxPosition_x,      "vtxPosition_x[naJets]/F");
+  _outTree->Branch("aJet_vtxPosition_y",  aJets.vtxPosition_y,      "vtxPosition_y[naJets]/F");
+  _outTree->Branch("aJet_vtxPosition_z",  aJets.vtxPosition_z,      "vtxPosition_z[naJets]/F");
+  _outTree->Branch("aJet_selectedTauDR",  aJets.selectedTauDR ,"selectedTauDR[naJets]/F");
+ 
+//===================
+
   _outTree->Branch("naJetsFat",  	&naJetsFat,		"naJetsFat/I"		);
   _outTree->Branch("aJetFat_pt",	aJetsFat.pt,	"pt[naJetsFat]/F"	);
   _outTree->Branch("aJetFat_eta",	aJetsFat.eta,	"eta[naJetsFat]/F"	);
   _outTree->Branch("aJetFat_phi",	aJetsFat.phi,	"phi[naJetsFat]/F"	);
-  _outTree->Branch("aJetFat_e",		aJetsFat.e,		"e[naJetsFat]/F"	);
+  _outTree->Branch("aJetFat_e",		aJetsFat.e,	"e[naJetsFat]/F"	);
   _outTree->Branch("aJetFat_csv",	aJetsFat.csv,	"csv[naJetsFat]/F"	);
 
   _outTree->Branch("numJets",  		  &numJets,  		"numJets/I"       	);                
@@ -1617,9 +1698,9 @@ int main(int argc, char* argv[])
   _outTree->Branch("VMt",  			&VMt,   		"VMt/F"    		);             	
 
   _outTree->Branch("nvlep",    &nvlep,    "nvlep/I"    );
-  _outTree->Branch("nvlepTau", &nvlepTau, "nvlepTau/I" );
-  _outTree->Branch("nalep",    &nalep,    "nalep/I"    );
 
+//===NOTE : don't save vlep (Duong 10-09-2015)
+/*
   _outTree->Branch("vLepton_mass",vLeptons.mass ,"mass[nvlep]/F");
   _outTree->Branch("vLepton_pt",vLeptons.pt ,"pt[nvlep]/F");
   _outTree->Branch("vLepton_eta",vLeptons.eta ,"eta[nvlep]");
@@ -1656,8 +1737,10 @@ int main(int argc, char* argv[])
   _outTree->Branch("vLepton_wp85",vLeptons.wp85,"wp85[nvlep]/F");
   _outTree->Branch("vLepton_wp80",vLeptons.wp80,"wp80[nvlep]/F");
   _outTree->Branch("vLepton_wp70",vLeptons.wp70,"wp70[nvlep]/F");
+*/
 
   // Adding variables for tau leptons
+  _outTree->Branch("nvlepTau", &nvlepTau, "nvlepTau/I" );
   _outTree->Branch("vLeptonTaus_mass",vLeptonsTaus.mass ,"mass[nvlepTau]/F");
   _outTree->Branch("vLeptonTaus_pt",vLeptonsTaus.pt ,"pt[nvlepTau]/F");
   _outTree->Branch("vLeptonTaus_eta",vLeptonsTaus.eta ,"eta[nvlepTau]");
@@ -1699,10 +1782,12 @@ int main(int argc, char* argv[])
   _outTree->Branch("vLeptonTaus_againstMuonMedium2",vLeptonsTaus.againstMuonMedium2,"againstMuonMedium2[nvlepTau]/F");
   _outTree->Branch("vLeptonTaus_againstMuonTight2",vLeptonsTaus.againstMuonTight2,"againstMuonTight2[nvlepTau]/F");
 
-  _outTree->Branch("aJet_selectedTauDR",aJets.selectedTauDR ,"selectedTauDR[naJets]/F");
   _outTree->Branch("tauPlusMode"          ,  &tauPlusMode    ,   "tauPlusMode/I");
   _outTree->Branch("tauMinusMode"         ,  &tauMinusMode   ,   "tauMinusMode/I");
 
+  
+
+  _outTree->Branch("nalep",    &nalep,    "nalep/I"    );
   _outTree->Branch("aLepton_mass",aLeptons.mass ,"mass[nalep]/F");
   _outTree->Branch("aLepton_pt",aLeptons.pt ,"pt[nalep]/F");
   _outTree->Branch("aLepton_eta",aLeptons.eta ,"eta[nalep]");
@@ -1777,6 +1862,8 @@ int main(int argc, char* argv[])
   _outTree->Branch("rho25"		,  &rho25	         ,   "rho25/F");
   _outTree->Branch("rhoN"		,  &rhoN	         ,   "rhoN/F");
   _outTree->Branch("nPVs"		,  &nPVs	         ,   "nPVs/I");
+  _outTree->Branch("nPV1s"		,  &nPV1s	         ,   "nPV1s/I");
+  _outTree->Branch("nTruePUs"		,  &nTruePUs	         ,   "nTruePUs/I");
   _outTree->Branch("METnoPU"		,  &METnoPU	         ,   "et/F:sumet:sig/F:phi/F");
   _outTree->Branch("METnoPUCh"		,  &METnoPUCh	         ,   "et/F:sumet:sig/F:phi/F");
   _outTree->Branch("MET"        ,  &MET          ,   "et/F:sumet:sig/F:phi/F");
@@ -1786,6 +1873,10 @@ int main(int argc, char* argv[])
   _outTree->Branch("METnoPUtype1corr"		,  &METnoPUtype1corr	         ,   "et/F:sumet:sig/F:phi/F");
   _outTree->Branch("METnoPUtype1p2corr"		,  &METnoPUtype1p2corr	         ,   "et/F:sumet:sig/F:phi/F");
   _outTree->Branch("METtype1diff"		,  &METtype1diff	         ,   "et/F:sumet:sig/F:phi/F");
+  
+//==NOTE : MET outside of VH candidate==
+  _outTree->Branch("aMET"        ,  &aMET          ,   "et/F:sumet:sig/F:phi/F");
+  _outTree->Branch("apfMET"        ,  &apfMET          ,   "et/F:sumet:sig/F:phi/F");
 
   _outTree->Branch("metUnc_et",&metUnc.et ,"et[24]/F");
   _outTree->Branch("metUnc_phi",&metUnc.phi ,"phi[24]/F");
@@ -1816,6 +1907,8 @@ int main(int argc, char* argv[])
   _outTree->Branch("btagA0TSF"	,  &btagA0TSF	         ,   "btagA0TSF/F");
   _outTree->Branch("btag1TA1C"	,  &btag1TA1C	         ,   "btag1TA1C/F");
 
+  _outTree->Branch("zdecayMode",    			&zdecayMode,				"zdecayMode/I"    );
+  
   int ievt=0;  
   int totalcount=0;
 
@@ -1877,7 +1970,8 @@ int main(int argc, char* argv[])
       //}
       //double MyWeight = LumiWeights_.weight( Tnpv );
       //  double MyWeight = LumiWeights_.weight( (*iEventB) );
-
+      nPV1s=aux.pvInfo.nVertices ;
+      nTruePUs=aux.puInfo.truePU ;
       PUweight=1.;
       PUweightP=1.;
       PUweightM=1.;
@@ -1975,9 +2069,9 @@ int main(int argc, char* argv[])
           }
         }
         //############### LHE stitching information ##################
-		//################# END OF PDF CODE ##################
+	//################# END OF PDF CODE ##################
 
-		for(unsigned int i=0; i<pup_.size(); ++i)
+        for(unsigned int i=0; i<pup_.size(); ++i)
 		{
 		  int id=hepeup_.IDUP[i]; //pdgId
 		  int status = hepeup_.ISTUP[i];
@@ -2008,7 +2102,8 @@ int main(int argc, char* argv[])
 		if( lCheck && vlbarCheck ) V_tlv = l + vlbar; // WToLNu
 		if( lbarCheck && vlCheck ) V_tlv = lbar + vl; // WToLNu       
 		lheV_pt = V_tlv.Pt();
-	  }
+      
+      } //end LHE information
 
       //std::cout << "lhe V pt = " << lheV_pt << std::endl;
 
@@ -2031,7 +2126,7 @@ int main(int argc, char* argv[])
       const std::vector<VHbbCandidate> * candW ;
       VHbbEvent modifiedEvent;
       const VHbbEvent *  iEvent =0;
-      if(fromCandidate)
+      if(fromCandidate) //fromCandiate = False
       {
 		fwlite::Handle< std::vector<VHbbCandidate> > vhbbCandHandleZ;
 		vhbbCandHandleZ.getByLabel(ev,"hbbBestCSVPt20Candidates");
@@ -2105,7 +2200,8 @@ int main(int argc, char* argv[])
 			}
 		  }
 		}
-		else
+		
+                else 
 		{  // for data
 		  //iEvent = vhbbHandle.product();
 		  // modify also the real data now to apply JEC 2012
@@ -2150,7 +2246,7 @@ int main(int argc, char* argv[])
 		//for(size_t m=0;m<iEvent->muInfo.size();m++)
 		//  if( fabs(iEvent->muInfo[m].p4.Pt()-28.118684) < 0.0001 || fabs(iEvent->muInfo[m].p4.Pt()-34.853199) < 0.0001 )  
 		//    std::cout << "FOUND " << iEvent->muInfo[m].p4.Pt() <<  " " << EVENT.event << " " << candW->size() << " " << candZ->size() << std::endl;
-      }
+      } //end getting Z candiate
 
       const std::vector<VHbbCandidate> * cand = candZ;
       //std::clog << "Filling tree "<< std::endl;
@@ -2176,22 +2272,26 @@ int main(int argc, char* argv[])
 			if(tauPlusMode==-99  && aux.mcTau[j].charge ==+1) tauPlusMode  = idd;
 		  }
 		}
-      }
+      } 
 	
       genHpt=aux.mcH.size() > 0 ? aux.mcH[0].p4.Pt():-99;
 
-      if(cand->size() == 0 ) continue;
+//==NOTE : bypass the filter basing on the existence of Z candidate (Duong 10-08-2015)
+      //if(cand->size() == 0 ) continue;
+      if (cand->size() > 0) {
       //if(cand->size() == 0 or cand->at(0).H.jets.size() < 2) continue;
       //std::cout << "cand->size() " << cand->size() << std::endl;
       //std::cout << "cand->at(0).H.jets.size() " << cand->at(0).H.jets.size() << std::endl;
       if(cand->size() > 1 ) std::cout << "MULTIPLE CANDIDATES: " << cand->size() << std::endl;
       if(cand->at(0).candidateType == VHbbCandidate::Wmun || cand->at(0).candidateType == VHbbCandidate::Wen ) { cand=candW; isW=true; }
-      if(cand->size() == 0)
-      {
-		//std::cout << "W event loss due to tigther cuts" << std::endl;
-        continue;
-      }
 
+//==NOTE : bypass the filter basing on the existence of Z candiate (Duong 10-08-2015)
+//      if(cand->size() == 0)
+//      {
+		//std::cout << "W event loss due to tigther cuts" << std::endl;
+//        continue;
+//      }
+      
       // secondary vtxs
       fwlite::Handle<std::vector<reco::Vertex> > SVC;
       SVC.getByLabel(ev,"bcandidates");
@@ -2202,10 +2302,10 @@ int main(int argc, char* argv[])
 
 	  // Log triggers
       patFilters.setEvent(&ev,"VH");
-      hbhe = patFilters.accept("hbhe");
+      hbhe                      = patFilters.accept("hbhe");
       ecalFlag 	      		= patFilters.accept("ecalFilter");
       totalKinematics 		= patFilters.accept("totalKinematics");
-      cschaloFlag 	  		= patFilters.accept("cschaloFilter");   
+      cschaloFlag   		= patFilters.accept("cschaloFilter");   
       hcallaserFlag   		= patFilters.accept("hcallaserFilter");   
       trackingfailureFlag 	= patFilters.accept("trackingfailureFilter");   
       eebadscFlag     		= patFilters.accept("eebadscFilter");   
@@ -2226,19 +2326,19 @@ int main(int argc, char* argv[])
       VMt    = vhCand.Mt();
       V.mass = vhCand.V.p4.M();
       if(isW) V.mass = vhCand.Mt();
+      
+      // CHANGED: Added loop to store allJets, allMuons, allElectrons info
+      allJets.reset();
+      nallJets = vhCand.allJets.size();
+      for(int j=0; j<nallJets && j < MAXJ; j++) allJets.set(vhCand.allJets[j],j);
+ 
+      allMuons.reset();
+      nallMuons = vhCand.V.muons.size();
+      for(int j=0; j<nallMuons && j < MAXL; j++) allMuons.set(vhCand.V.muons[j],j,13,aux, j);
 
-  	  // CHANGED: Added loop to store allJets, allMuons, allElectrons info
-  	  allJets.reset();
-	  nallJets = vhCand.allJets.size();
-	  for(int j=0; j<nallJets && j < MAXJ; j++) allJets.set(vhCand.allJets[j],j);
-
-  	  allMuons.reset();
-	  nallMuons = vhCand.V.muons.size();
-	  for(int j=0; j<nallMuons && j < MAXL; j++) allMuons.set(vhCand.V.muons[j],j,13,aux);
-
-  	  allElectrons.reset();
-	  nallElectrons = vhCand.V.electrons.size();
-	  for(int j=0; j<nallElectrons && j < MAXL; j++) allElectrons.set(vhCand.V.electrons[j],j,11,aux);
+      allElectrons.reset();
+      nallElectrons = vhCand.V.electrons.size(); //electrons = all electron inside HbbAnalyzerNew of step 1 
+      for(int j=0; j<nallElectrons && j < MAXL; j++) allElectrons.set(vhCand.V.electrons[j],j,11,aux, j);
 
 	  // Log Higgs Information
       if(vhCand.H.HiggsFlag) H.HiggsFlag=1;
@@ -2256,6 +2356,8 @@ int main(int argc, char* argv[])
       if(vhCand.FatH.FatHiggsFlag) FatH.FatHiggsFlag =1;
 	  else FatH.FatHiggsFlag=0;
       fathFilterJets.reset();
+      
+//==fill additional fat jets===
       aJetsFat.reset();
       if(vhCand.FatH.FatHiggsFlag)
 	  { 
@@ -2294,9 +2396,12 @@ int main(int argc, char* argv[])
 
       } // FatHiggsFlag
 
-	  // Log Higgs Candidate Info
+// Log Higgs Candidate Info
+
+//==fill higgs jet and additional jets==
       hJets.reset();
-      aJets.reset();
+//==NOTE : move aJets out of VH candidate==
+//      aJets.reset();
       if(vhCand.H.HiggsFlag)
 	  {
 		nhJets=2;
@@ -2304,7 +2409,7 @@ int main(int argc, char* argv[])
 		hJets.set(vhCand.H.jets[1],1);
 
 		VtypeWithTau=vhCand.candidateTypeWithTau;
-		aJets.reset();
+//		aJets.reset();
   
 		naJets=vhCand.additionalJets.size();
 		numBJets=0;
@@ -2312,9 +2417,9 @@ int main(int argc, char* argv[])
 		if(vhCand.H.jets[1].csv> btagThr) numBJets++;
 		for( int j=0; j < naJets && j < MAXJ; j++ ) 
 	    {
-		  aJets.set(vhCand.additionalJets[j],j);
+//		  aJets.set(vhCand.additionalJets[j],j);
 		  if(vhCand.additionalJets[j].csv> btagThr) numBJets++;
-		  if (VtypeWithTau==VHbbCandidate::Wtaun) aJets.selectedTauDR[j] = vhCand.VTau.taus[0].p4.DeltaR(vhCand.additionalJets[j].p4);  
+//		  if (VtypeWithTau==VHbbCandidate::Wtaun) aJets.selectedTauDR[j] = vhCand.VTau.taus[0].p4.DeltaR(vhCand.additionalJets[j].p4);  
 		}
 
 		numJets = vhCand.additionalJets.size()+2;
@@ -2664,14 +2769,14 @@ int main(int argc, char* argv[])
       weightTrigV4 = -1.; 
       weightTrigOrMu30 = 1.;
       TLorentzVector leptonForTop;
-      size_t firstAddMu=0;
-      size_t firstAddEle=0;
+//      size_t firstAddMu = 0 ;
+//      size_t firstAddEle = 0 ;
 //      size_t firstAddTau=0;
 
       if(Vtype == VHbbCandidate::Zmumu )
 	  {
-		vLeptons.set(vhCand.V.muons[0],0,13,aux); 
-		vLeptons.set(vhCand.V.muons[vhCand.V.secondLepton],1,13,aux);
+		vLeptons.set(vhCand.V.muons[0],0,13,aux,1); 
+		vLeptons.set(vhCand.V.muons[vhCand.V.secondLepton],1,13,aux,2);
 		float cweightID   = triggerWeight.scaleMuID(vLeptons.pt[0],vLeptons.eta[0]) * triggerWeight.scaleMuID(vLeptons.pt[1],vLeptons.eta[1]) ;
 		float weightTrig1 = triggerWeight.scaleMuIsoHLT(vLeptons.pt[0],vLeptons.eta[0]);
 		float weightTrig2 = triggerWeight.scaleMuIsoHLT(vLeptons.pt[1],vLeptons.eta[1]);
@@ -2697,16 +2802,16 @@ int main(int argc, char* argv[])
 		weightTrig2012ASingleMuon=weightTrig2012SingleMuon;
 	
 		nvlep=2;
-		firstAddMu=2;
+//		firstAddMu=2;
       }
 
       if( Vtype == VHbbCandidate::Zee )
 	  {
-		vLeptons.set(vhCand.V.electrons[0],0,11,aux);
+		vLeptons.set(vhCand.V.electrons[0],0,11,aux, 1);
 		//std::cout << vhCand.V.secondLepton << std::endl;
-		vLeptons.set(vhCand.V.electrons[vhCand.V.secondLepton],1,11,aux);
+		vLeptons.set(vhCand.V.electrons[vhCand.V.secondLepton],1,11,aux, 2);
 		nvlep=2;
-		firstAddEle=2;
+//		firstAddEle=2;
 		std::vector<float> pt,eta;
 		pt.push_back(vLeptons.pt[0]); eta.push_back(vLeptons.eta[0]);
 		pt.push_back(vLeptons.pt[1]); eta.push_back(vLeptons.eta[1]);
@@ -2740,7 +2845,7 @@ int main(int argc, char* argv[])
       if(Vtype == VHbbCandidate::Wmun )
 	  {
 		leptonForTop=vhCand.V.muons[0].p4;
-		vLeptons.set(vhCand.V.muons[0],0,13,aux); 
+		vLeptons.set(vhCand.V.muons[0],0,13,aux, 1); 
 		float cweightID = triggerWeight.scaleMuID(vLeptons.pt[0],vLeptons.eta[0]);
 		float weightTrig1 = triggerWeight.scaleMuIsoHLT(vLeptons.pt[0],vLeptons.eta[0]);
 		float cweightTrig = weightTrig1;
@@ -2763,15 +2868,15 @@ int main(int argc, char* argv[])
 		weightTrig2012AB =  weightTrig2012ABSingleMuon *  triggerWeightAB.muId2012A(vLeptons.pt[0],vLeptons.eta[0]) ;
 
 		nvlep=1;
-		firstAddMu=1;
+//		firstAddMu=1;
       }
 
       if( Vtype == VHbbCandidate::Wen )
 	  {
 		leptonForTop=vhCand.V.electrons[0].p4;
-		vLeptons.set(vhCand.V.electrons[0],0,11,aux);
+		vLeptons.set(vhCand.V.electrons[0],0,11,aux, 1);
 		nvlep=1;
-		firstAddEle=1;
+//		firstAddEle=1;
 		weightTrigMay = triggerWeight.scaleSingleEleMay(vLeptons.pt[0],vLeptons.eta[0]);
 		weightTrigV4 = triggerWeight.scaleSingleEleV4(vLeptons.pt[0],vLeptons.eta[0]);
 		weightEleRecoAndId=triggerWeight.scaleID80Ele(vLeptons.pt[0],vLeptons.eta[0]) * triggerWeight.scaleRecoEle(vLeptons.pt[0],vLeptons.eta[0]);
@@ -2801,14 +2906,14 @@ int main(int argc, char* argv[])
 
 		if ( vhCand.VTau.taus.size() > 0 )
 		{
-		  vLeptonsTaus.set(vhCand.VTau.taus[0],0,15,aux); 
+		  vLeptonsTaus.set(vhCand.VTau.taus[0],0,15,aux,1); 
 		  //cout << vLeptonsTaus.pt[0] << ", " << vLeptonsTaus.decayModeFinding[0] << endl;
 		  nvlepTau=1;
 		  //firstAddTau=1;
 		}
       }
-
-	  if(isMC_)
+      
+      if(isMC_)
 	  {
         weightTrigMET80 =  triggerWeight.scaleMET80(MET.et);
         weightTrigMET100 =  triggerWeight.scaleMET80(MET.et);
@@ -2833,9 +2938,9 @@ int main(int argc, char* argv[])
 		//weightTrig2012A = 
 	  }
       
-	  if(weightTrigMay < 0) weightTrigMay=weightTrig;
-	  if(weightTrigV4 < 0) weightTrigV4=weightTrig;
-	  if(!isMC_)
+      if(weightTrigMay < 0) weightTrigMay=weightTrig;
+      if(weightTrigV4 < 0) weightTrigV4=weightTrig;
+      if(!isMC_)
       {
 		weightTrig = 1.; 
 		weightTrigMay = 1.;
@@ -2853,27 +2958,28 @@ int main(int argc, char* argv[])
 		weightTrigMETLP = 1.;
       }
 
-	  aLeptons.reset();
-	  nalep=0;
-	  //std::cout << "Triggers" << std::endl;
-	  if(fromCandidate)
-      {
-		for(size_t j=firstAddMu; j< vhCand.V.muons.size();    j++) aLeptons.set(vhCand.V.muons[j],     nalep++, 13, aux);
-		for(size_t j=firstAddEle;j< vhCand.V.electrons.size();j++) aLeptons.set(vhCand.V.electrons[j], nalep++, 11, aux);
-	  }
-	  else
-      {
-	    for(size_t j=0;j< iEvent->muInfo.size();j++)
-          if((j!= vhCand.V.firstLeptonOrig && j!= vhCand.V.secondLeptonOrig) || ((Vtype != VHbbCandidate::Wmun ) && (Vtype != VHbbCandidate::Zmumu )) )
-			aLeptons.set(iEvent->muInfo[j],nalep++,13,aux);
-	    for(size_t j=0;j< iEvent->eleInfo.size();j++)
-          if((j!= vhCand.V.firstLeptonOrig && j!= vhCand.V.secondLeptonOrig) || ((Vtype != VHbbCandidate::Wen ) && (Vtype != VHbbCandidate::Zee )))
-			aLeptons.set(iEvent->eleInfo[j],nalep++,11,aux);
-      }
+//==fill additional lepton==
+//NOTE : move outside of candidate check (Duong, 10-08-2015)
+//      aLeptons.reset();
+//      nalep=0;
+//      if(fromCandidate)
+//      {
+//		for(size_t j=firstAddMu; j< vhCand.V.muons.size();    j++) aLeptons.set(vhCand.V.muons[j],     nalep++, 13, aux);
+//		for(size_t j=firstAddEle;j< vhCand.V.electrons.size();j++) aLeptons.set(vhCand.V.electrons[j], nalep++, 11, aux);
+//      }
+//      else
+//      {
+//          for(size_t j=0;j< iEvent->muInfo.size();j++)
+//            if((j!= vhCand.V.firstLeptonOrig && j!= vhCand.V.secondLeptonOrig) || ((Vtype != VHbbCandidate::Wmun ) && (Vtype != VHbbCandidate::Zmumu )) )
+//			aLeptons.set(iEvent->muInfo[j],nalep++,13,aux);
+//          for(size_t j=0;j< iEvent->eleInfo.size();j++)
+//            if((j!= vhCand.V.firstLeptonOrig && j!= vhCand.V.secondLeptonOrig) || ((Vtype != VHbbCandidate::Wen ) && (Vtype != VHbbCandidate::Zee )))
+//			aLeptons.set(iEvent->eleInfo[j],nalep++,11,aux);
+//      }
 	  //std::cout << "Leptons done" << std::endl;
 
-	  if(isMC_)
-	  {
+      if(isMC_)
+      {
 	    //std::cout << "BTAGSF " <<  btagJetInfos.size() << " " << btag.weight<BTag1Tight2CustomFilter>(btagJetInfos) << std::endl;
 	    if ( btagJetInfos.size()< 10) 
 	    {
@@ -2899,7 +3005,7 @@ int main(int argc, char* argv[])
 	    }
 	  }
             
-	  if(maxBtag > -99999)
+      if(maxBtag > -99999)
       { 
 	    TopHypo topQuark = TopMassReco::topMass(leptonForTop,bJet,vhCand.V.mets.at(0).p4);
 	    top.mass = topQuark.p4.M();
@@ -3135,11 +3241,80 @@ int main(int argc, char* argv[])
         }
 
       }//HiggsFlag
+      } //end if has a Z candidate
+   
+      nalep=0;
+      aLeptons.reset();
+      int doBelongToVhCand(0) ;
+      unsigned firstLeptInd(1000) ;
+      unsigned secondLeptInd(1000) ;
+      unsigned nGoodLept = nallElectrons + nallMuons ;
+      if (cand->size() > 0) { 
+        const VHbbCandidate & vhCand =  cand->at(0);
+        firstLeptInd = vhCand.V.firstLeptonOrig ;
+        secondLeptInd = vhCand.V.secondLeptonOrig ;
+      }
 
-      //std::cout << "Fill" << std::endl;
-	  _outTree->Fill();
+      for(size_t j=0;j< iEvent->muInfo.size();j++) {
+        if (j == firstLeptInd) doBelongToVhCand = 1 ;
+        if (j == secondLeptInd) doBelongToVhCand = 2 ;
+        aLeptons.set(iEvent->muInfo[j],nalep++,13,aux, doBelongToVhCand);
+        if (iEvent->muInfo[j].p4.Pt() > 15 && fabs(iEvent->muInfo[j].p4.Eta()) < 2.6) nGoodLept += 1 ;  
+      }
+      for(size_t j=0;j< iEvent->eleInfo.size();j++) { 
+        if (j == firstLeptInd) doBelongToVhCand = 1 ;
+        if (j == secondLeptInd) doBelongToVhCand = 2 ;
+        aLeptons.set(iEvent->eleInfo[j],nalep++,11,aux, doBelongToVhCand);
+        if (iEvent->eleInfo[j].p4.Pt() > 15 && fabs(iEvent->eleInfo[j].p4.Eta()) < 2.6) nGoodLept += 1 ;  
+      }
+      
+      aJets.reset();
+      naJets = iEvent->simpleJets2.size() ;
+      for(int j=0 ; j < naJets ; ++j)  aJets.set(iEvent->simpleJets2[j],j) ; 
+      
+      aMET.et = iEvent->pfmetType1corr.p4.Pt();
+      aMET.phi = iEvent->pfmetType1corr.p4.Phi();
+      aMET.sumet = iEvent->pfmetType1corr.sumEt;
+      aMET.sig = iEvent->pfmetType1corr.metSig;
+      apfMET.et    = iEvent->pfmet.p4.Pt();
+      apfMET.phi   = iEvent->pfmet.p4.Phi();
+      apfMET.sumet = iEvent->pfmet.sumEt;
+      apfMET.sig   = iEvent->pfmet.metSig;
+      
+      if(isMC_) {  
+//==fill gen particle from Z+ll==
+      fwlite::Handle<std::vector<reco::GenParticle> > genPartH ;
+      genPartH.getByLabel(ev,"savedGenParticles");
+      //genPartH.getByLabel(ev,"genParticles");
+      std::vector<reco::GenParticle> genPartV = *(genPartH.product());
+//==find Z particle==
+      int pdgId(0) ;
+      int status(-10) ;
+      for (unsigned i = 0; i < genPartV.size(); i++) {
+        pdgId = genPartV[i].pdgId() ;
+        status = genPartV[i].status() ;
+        if (pdgId == 23 && status == 3) {
+          const reco::GenParticleRefVector& daughterRefs = genPartV[i].daughterRefVector();
+          //cout << "\n ===================" ;
+          for(reco::GenParticleRefVector::const_iterator idr = daughterRefs.begin(); idr!= daughterRefs.end(); ++idr) {
+            //cout<<"    - Daughter "<<(*idr).key()<<" "<<(*idr)->pdgId()<<endl;
+            if (abs((*idr)->pdgId()) == 11) { zdecayMode = 1 ; break ;} 
+            if (abs((*idr)->pdgId()) == 13) { zdecayMode = 2 ; break ;} 
+            if (abs((*idr)->pdgId()) == 15) { zdecayMode = 3 ; break ;} 
+          }
 
-	}// closed event loop
+          break ;
+
+        }
+      }
+      } //end if (isMC_)
+      
+      //==NOTE : for data require at least one good lepton = nallElectrons + nallMuons + naLepton (pt > 15 and fabs(eta) < 2.6)== Duong (10-09-2015)
+      if (!isMC_ && (nGoodLept == 0)) continue ;  
+      _outTree->Fill();
+
+    
+    }// closed event loop
 
     std::cout << "closing the file: " << inputFiles_[iFile] << std::endl;
     inFile->Close();  // close input file

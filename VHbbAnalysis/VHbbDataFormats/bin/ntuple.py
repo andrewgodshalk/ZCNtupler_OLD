@@ -8,7 +8,7 @@ process = cms.Process("FWLitePlots")
 process.fwliteInput = cms.PSet(
     fileNames   = cms.vstring(
       # ttbar lep
-	'root://xrootd.unl.edu//store/user/arizzi/TTJets_FullLeptMGDecays_8TeV-madgraph/TTJets_FullLeptMGDecays_8TeV-madgraph_Summer12_DR53X-PU_S10_START53_V7A-v2_EDMNtuple_V42_ProcV1/9803889241b1fc304f795d3b3875632d//PAT.edm_99_0_DWK.root',
+	#'root://xrootd.unl.edu//store/user/arizzi/TTJets_FullLeptMGDecays_8TeV-madgraph/TTJets_FullLeptMGDecays_8TeV-madgraph_Summer12_DR53X-PU_S10_START53_V7A-v2_EDMNtuple_V42_ProcV1/9803889241b1fc304f795d3b3875632d//PAT.edm_99_0_DWK.root',
       # ttbar semi
 #	'root://xrootd.unl.edu//store/user/arizzi/TTJets_SemiLeptMGDecays_8TeV-madgraph/TTJets_SemiLeptMGDecays_8TeV-madgraph_Summer12_DR53X-PU_S10_START53_V7A_ext-v1_EDMNtuple_V42_ProcV1/9803889241b1fc304f795d3b3875632d//PAT.edm_999_1_Ruc.root',
       # ttbar had
@@ -19,6 +19,9 @@ process.fwliteInput = cms.PSet(
 #	'root://xrootd.unl.edu//store/user/lpchbb/dlopes/WZ_Summer12_53X_V42b/dlopes/WZ_TuneZ2star_8TeV_pythia6_tauola/HBB_EDMNtupleV42/9803889241b1fc304f795d3b3875632d//PAT.edm_100_1_4OQ.root',
       # ZZ
 #	'root://xrootd.unl.edu//store/user/lpchbb/dlopes/ZZ_Summer12_53X_V42b/dlopes/ZZ_TuneZ2star_8TeV_pythia6_tauola/HBB_EDMNtupleV42/9803889241b1fc304f795d3b3875632d//PAT.edm_100_1_ASb.root',
+       'file:/eos/uscms/store/user/duong/VHbbTuples/DY/PAT.edm_436_3_pev.root'
+       #'file:/eos/uscms/store/user/godshalk/noreplica/DYJetsToLL_M-50_TuneZ2Star_8TeV-madgraph-tarball/PAT.edm_126_1_iyd.root'
+       #'file:/eos/uscms/store/user/leptonjets/godshalk/SingleMuRun2012B-13Jul2012/PAT.edm_862_1_P5P.root'
     ),
     PUmcfileName2011B	= cms.string("Summer12MCObserved.root"),
     PUdatafileName2011B = cms.string("MyDataPileupHistogramObserved.root"),
@@ -29,7 +32,7 @@ process.fwliteInput = cms.PSet(
     PUdatafileName 	= cms.string("data_PU_60bins_190456-208686_69.4mb.root"),
     badEventsFileName 	= cms.string("HCALLaser2012AllDatasets.txt"),
     Weight3DfileName 	= cms.string(""),
-    maxEvents   	= cms.int32(10000),                             ## optional
+    maxEvents   	= cms.int32(-1),                             ## optional
     runMin  		= cms.int32(-1),
     runMax  		= cms.int32(-1),
     skipEvents   	= cms.int32(0),                             ## optional
@@ -71,7 +74,7 @@ for basename in basenamelist:
 #
 
 
-fname = 'Test' + channel + '.root'
+fname = 'Test' + channel + '_MC.root'
 
 process.fwliteOutput = cms.PSet(
     fileName  = cms.string(fname),	## mandatory
@@ -134,6 +137,10 @@ process.Analyzer = cms.PSet(
         "HLT_LooseIsoPFTau35_Trk20_Prong1_v.*", #51
         "HLT_LooseIsoPFTau35_Trk20_Prong1_MET70_v.*", #52
         "HLT_LooseIsoPFTau35_Trk20_Prong1_MET75_v.*", #53
+        "HLT_Mu17_Ele8_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v.*",
+        "HLT_Mu7_Ele7_CaloIdT_CaloIsoVL_v.*",
+        "HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v.*",
+        "HLT_Mu17_Ele8_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v.*",
     ),
     isMC 		= cms.bool(True),
     verbose 		= cms.bool(False),
