@@ -1246,6 +1246,9 @@ int main(int argc, char* argv[])
   TH3F * input3DPU = new TH3F("Input3DPU","Input3DPU", 36,-0.5,35.5,36,-0.5,35.5, 36,-0.5,35.5 );
   
   TH1F * pu = new TH1F("pileup","",51,-0.5,50.5);
+  
+  TH1F* hEvent = new TH1F("Event", "", 3, 0, 3) ; 
+
   _outTree = new TTree("tree", "myTree");
   
   _outTree->Branch("H",  	&H,  	   "HiggsFlag/I:mass/F:pt/F:eta:phi/F:dR/F:dPhi/F:dEta/F");
@@ -1741,6 +1744,9 @@ int main(int argc, char* argv[])
 
   // Adding variables for tau leptons
   _outTree->Branch("nvlepTau", &nvlepTau, "nvlepTau/I" );
+
+//==NOTE : don't save vLepton== Duong (10-09-2015)
+/*  
   _outTree->Branch("vLeptonTaus_mass",vLeptonsTaus.mass ,"mass[nvlepTau]/F");
   _outTree->Branch("vLeptonTaus_pt",vLeptonsTaus.pt ,"pt[nvlepTau]/F");
   _outTree->Branch("vLeptonTaus_eta",vLeptonsTaus.eta ,"eta[nvlepTau]");
@@ -1781,7 +1787,7 @@ int main(int argc, char* argv[])
   _outTree->Branch("vLeptonTaus_againstMuonLoose2",vLeptonsTaus.againstMuonLoose2,"againstMuonLoose2[nvlepTau]/F");
   _outTree->Branch("vLeptonTaus_againstMuonMedium2",vLeptonsTaus.againstMuonMedium2,"againstMuonMedium2[nvlepTau]/F");
   _outTree->Branch("vLeptonTaus_againstMuonTight2",vLeptonsTaus.againstMuonTight2,"againstMuonTight2[nvlepTau]/F");
-
+*/
   _outTree->Branch("tauPlusMode"          ,  &tauPlusMode    ,   "tauPlusMode/I");
   _outTree->Branch("tauMinusMode"         ,  &tauMinusMode   ,   "tauMinusMode/I");
 
@@ -1931,10 +1937,12 @@ int main(int argc, char* argv[])
     fwlite::Handle< VHbbEventAuxInfo > vhbbAuxHandle; 
     for(ev.toBegin(); !ev.atEnd() ; ++ev, ++ievt)
     {
-      if (ievt <= skipEvents_) continue;
+      
+      hEvent->Fill(0.5) ;
+      
+      if (ievt < skipEvents_ && skipEvents_ > 0) continue;
       if (maxEvents_ >= 0)
         if (ievt > maxEvents_ + skipEvents_) break;
-
 	  // Get HbbAnalyzer Object from Step1 PATTuble
       const char * lab = "HbbAnalyzerNew";
       vhbbAuxHandle.getByLabel(ev,lab,0,0);
@@ -1953,6 +1961,8 @@ int main(int argc, char* argv[])
       if(EVENT.run < runMin_ && runMin_ > 0) continue;
       if(EVENT.run > runMax_ && runMax_ > 0) continue;
 
+      hEvent->Fill(1.5) ; //after skip
+      
       count->Fill(1.);
 
       //Handle<std::vector< PileupSummaryInfo > >  PupInfo;
@@ -3269,8 +3279,13 @@ int main(int argc, char* argv[])
       }
       
       aJets.reset();
-      naJets = iEvent->simpleJets2.size() ;
-      for(int j=0 ; j < naJets ; ++j)  aJets.set(iEvent->simpleJets2[j],j) ; 
+      naJets = 0 ;
+      for(unsigned j=0 ; j < iEvent->simpleJets2.size() ; ++j) {
+        if (iEvent->simpleJets2[j].p4.Pt() > 20 && fabs(iEvent->simpleJets2[j].p4.Eta()) < 3) {
+          aJets.set(iEvent->simpleJets2[j],naJets) ;
+          naJets += 1 ;
+        }
+      } 
       
       aMET.et = iEvent->pfmetType1corr.p4.Pt();
       aMET.phi = iEvent->pfmetType1corr.p4.Phi();
@@ -3311,6 +3326,9 @@ int main(int argc, char* argv[])
       
       //==NOTE : for data require at least one good lepton = nallElectrons + nallMuons + naLepton (pt > 15 and fabs(eta) < 2.6)== Duong (10-09-2015)
       if (!isMC_ && (nGoodLept == 0)) continue ;  
+
+      hEvent->Fill(2.5) ; //number of events filled
+
       _outTree->Fill();
 
     
