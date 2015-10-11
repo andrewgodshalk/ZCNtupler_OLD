@@ -122,7 +122,9 @@ class VHbbCandidate
 	std::vector<VHbbEvent::SimpleJet> additionalJetsFat;
   
 	// Added 2014-02-21 by godshalk
-	std::vector<VHbbEvent::SimpleJet> allJets;
+	std::vector<VHbbEvent::SimpleJet> allJets ;
+  // Added 2015-10-11 by duong : store the original index of jets in simpleJet. Needed to store jetWithJEC
+  std::vector<int> allJets_oriInd ; 
 };
 
 

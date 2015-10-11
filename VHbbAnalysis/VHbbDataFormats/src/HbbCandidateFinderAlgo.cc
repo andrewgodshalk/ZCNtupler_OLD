@@ -88,6 +88,7 @@ void HbbCandidateFinderAlgo::run (const VHbbEvent* event, std::vector<VHbbCandid
   // Find jets that have no overlap w/ muons, electrons found above
   // simpleJets2 == anti-kt R=0.5 PF jets
   std::vector<VHbbEvent::SimpleJet> noOverlap;
+  std::vector<int> oriInds ;
   for(size_t j=0; j < event->simpleJets2.size(); j++)
   {
     float overlap = false;
@@ -95,7 +96,10 @@ void HbbCandidateFinderAlgo::run (const VHbbEvent* event, std::vector<VHbbCandid
       if(deltaR(mu[i].p4.Eta(),mu[i].p4.Phi(),event->simpleJets2[j].p4.Eta(),event->simpleJets2[j].p4.Phi()) < 0.5) overlap=true; 
     for(size_t i=0; i< ele.size(); i++)
       if(deltaR(ele[i].p4.Eta(),ele[i].p4.Phi(),event->simpleJets2[j].p4.Eta(),event->simpleJets2[j].p4.Phi()) < 0.5) overlap=true;
-    if(!overlap) noOverlap.push_back(event->simpleJets2[j]);
+    if(!overlap) {
+      noOverlap.push_back(event->simpleJets2[j]) ;
+      oriInds.push_back(j) ;
+    }
     //else std::cout << "jet removed in cleaning" << std::endl;
   }
 
@@ -186,6 +190,7 @@ void HbbCandidateFinderAlgo::run (const VHbbEvent* event, std::vector<VHbbCandid
   temp.additionalJetsFat = addJetsFat;
   //temp.allJets		 = event->simpleJets2;			// **WARNING** May not be able to assign like so. Also, may need to sort.
   temp.allJets		 = noOverlap;	// To remove jets that overlap muons.
+  temp.allJets_oriInd = oriInds ;
   temp.V.mets  		 = met;
   temp.V.muons 		 = mu;
   temp.V.electrons 	 = ele;

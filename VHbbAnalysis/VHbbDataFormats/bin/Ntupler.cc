@@ -199,12 +199,21 @@ float resolutionBias(float eta)
  if(eta< 2.5) return 0.10;
  if(eta< 5) return 0.30;*/
 //new numbers from:	https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution
-   if(eta< 0.5) return 0.052;
-   if(eta< 1.1) return 0.057;
-   if(eta< 1.7) return 0.096;
-   if(eta< 2.3) return 0.134;
-   if(eta< 5) return 0.28;
-
+//==These are for 7 TeV==
+//   if(eta< 0.5) return 0.052;
+//   if(eta< 1.1) return 0.057;
+//   if(eta< 1.7) return 0.096;
+//   if(eta< 2.3) return 0.134;
+//   if(eta< 5) return 0.28;
+//==NOTE : update for 8 TeV data (Duong 10-11-2015)
+//put here c-1 with c from https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution
+   if(eta< 0.5) return 0.079;
+   if(eta< 1.1) return 0.099;
+   if(eta< 1.7) return 0.121;
+   if(eta< 2.3) return 0.208;
+   if(eta< 2.8) return 0.254;
+   if(eta< 3.2) return 0.395;
+   if(eta<5) return 0.056;
 
  return 0;
 }
@@ -769,12 +778,27 @@ BTagShapeInterface * nominalShape1Bin=0;
 typedef struct 
 {
   // set() - Copy info from SimpleJet j onto JetInfo index i
-  void set(const VHbbEvent::SimpleJet & j, int i) 
+  void set(const VHbbEvent::SimpleJet & j, int i, const TLorentzVector& jetWithJEC, const TLorentzVector& jetBestMC, int bestMCidIn) 
   {
     pt[i]=j.p4.Pt();
     eta[i]=j.p4.Eta();
     phi[i]=j.p4.Phi();
     e[i]=j.p4.E();
+    pt_withJEC[i]=jetWithJEC.Pt();
+    eta_withJEC[i]=jetWithJEC.Eta();
+    phi_withJEC[i]=jetWithJEC.Phi();
+    e_withJEC[i]=jetWithJEC.E();
+    pt_bestMC[i]=jetBestMC.Pt();
+    if (jetBestMC.P() > 0.001) {
+      eta_bestMC[i]=jetBestMC.Eta();
+      phi_bestMC[i]=jetBestMC.Phi();
+    }
+    else {
+      eta_bestMC[i]= -99 ;
+      phi_bestMC[i]= -99 ;
+    }
+    e_bestMC[i]=jetBestMC.E();
+    bestMCid[i]=bestMCidIn ;
     csv[i]=j.csv;
     jp[i]=j.jp;
     jpb[i]=j.jpb;    
@@ -879,7 +903,11 @@ typedef struct
   {
     for(int i=0;i<MAXJ;i++)
 	{
-      pt[i]=-99; eta[i]=-99; phi[i]=-99;e[i]=-99;jp[i]=-99;jpb[i]=-99;csv[i]=-99;csv_nominal[i]=-99.;csv_upBC[i]=-99.;csv_downBC[i]=-99.;csv_upL[i]=-99.;csv_downL[i]=-99.;csv_nominal1Bin[i]=-99.;
+      pt[i]=-99; eta[i]=-99; phi[i]=-99;e[i]=-99;
+      pt_withJEC[i]=-99; eta_withJEC[i]=-99; phi_withJEC[i]=-99;e_withJEC[i]=-99;
+      pt_bestMC[i]=-99; eta_bestMC[i]=-99; phi_bestMC[i]=-99;e_bestMC[i]=-99;
+      bestMCid[i]=-99 ;
+      jp[i]=-99;jpb[i]=-99;csv[i]=-99;csv_nominal[i]=-99.;csv_upBC[i]=-99.;csv_downBC[i]=-99.;csv_upL[i]=-99.;csv_downL[i]=-99.;csv_nominal1Bin[i]=-99.;
       csvivf[i]=-99; cmva[i]=-99;
       cosTheta[i]=-99; numTracksSV[i]=-99; chf[i]=-99; nhf[i]=-99; cef[i]=-99; nef[i]=-99; nch[i]=-99; nconstituents[i]=-99; flavour[i]=-99; isSemiLeptMCtruth[i]=-99; isSemiLept[i]=-99;      
       SoftLeptpdgId[i] = -99; SoftLeptIdlooseMu[i] = -99;  SoftLeptId95[i] =  -99;   SoftLeptPt[i] = -99;  SoftLeptdR[i] = -99;   SoftLeptptRel[i] = -99; SoftLeptRelCombIso[i] = -99;  
@@ -898,6 +926,15 @@ typedef struct
   float eta[MAXJ];
   float phi[MAXJ];
   float e[MAXJ];
+  float pt_withJEC[MAXJ] ;
+  float eta_withJEC[MAXJ];
+  float phi_withJEC[MAXJ];
+  float e_withJEC[MAXJ];
+  float pt_bestMC[MAXJ] ;
+  float eta_bestMC[MAXJ];
+  float phi_bestMC[MAXJ];
+  float e_bestMC[MAXJ];
+  int   bestMCid[MAXJ];
   float jp[MAXJ];
   float jpb[MAXJ];
   float csv[MAXJ];
@@ -1393,7 +1430,17 @@ int main(int argc, char* argv[])
   _outTree->Branch("allJet_pt",				allJets.pt,					"pt[nallJets]/F");
   _outTree->Branch("allJet_eta",			allJets.eta,				"eta[nallJets]/F");
   _outTree->Branch("allJet_phi",			allJets.phi,				"phi[nallJets]/F");
-  _outTree->Branch("allJet_e",				allJets.e,					"e[nallJets]/F");
+  _outTree->Branch("allJet_e",				allJets.e,           "e[nallJets]/F");
+  _outTree->Branch("allJet_pt_withJEC",			allJets.pt_withJEC,  "pt_withJEC[nallJets]/F");
+  _outTree->Branch("allJet_eta_withJEC",		allJets.eta_withJEC, "eta_withJEC[nallJets]/F");
+  _outTree->Branch("allJet_phi_withJEC",		allJets.phi_withJEC, "phi_withJEC[nallJets]/F");
+  _outTree->Branch("allJet_e_withJEC",			allJets.e_withJEC,   "e_withJEC[nallJets]/F");
+  _outTree->Branch("allJet_pt_bestMC",			allJets.pt_bestMC,   "pt_bestMC[nallJets]/F");
+  _outTree->Branch("allJet_eta_bestMC",			allJets.eta_bestMC,  "eta_bestMC[nallJets]/F");
+  _outTree->Branch("allJet_phi_bestMC",			allJets.phi_bestMC,  "phi_bestMC[nallJets]/F");
+  _outTree->Branch("allJet_e_bestMC",			allJets.e_bestMC,    "e_bestMC[nallJets]/F");
+  _outTree->Branch("allJet_bestMCid",			allJets.bestMCid,    "bestMCid[nallJets]/I");
+
   _outTree->Branch("allJet_jp",			    allJets.jp, 				"jp[nallJets]/F");
   _outTree->Branch("allJet_jpb",			allJets.jpb, 				"jpb[nallJets]/F");
   _outTree->Branch("allJet_csv",			allJets.csv, 				"csv[nallJets]/F");
@@ -1553,22 +1600,32 @@ int main(int argc, char* argv[])
   _outTree->Branch("aJet_eta",			aJets.eta,				"eta[naJets]/F");
   _outTree->Branch("aJet_phi",			aJets.phi,				"phi[naJets]/F");
   _outTree->Branch("aJet_e",				aJets.e,					"e[naJets]/F");
-  _outTree->Branch("aJet_jp",			    aJets.jp, 				"jp[naJets]/F");
-  _outTree->Branch("aJet_jpb",			aJets.jpb, 				"jpb[naJets]/F");
-  _outTree->Branch("aJet_csv",			aJets.csv, 				"csv[naJets]/F");
-  _outTree->Branch("aJet_csv_nominal",	aJets.csv_nominal, 		"csv_nominal[naJets]/F");
-  _outTree->Branch("aJet_csv_upBC",		aJets.csv_upBC, 			"csv_upBC[naJets]/F");
+  _outTree->Branch("aJet_pt_withJEC",	  aJets.pt_withJEC,			"pt_withJEC[naJets]/F");
+  _outTree->Branch("aJet_eta_withJEC",  aJets.eta_withJEC,			"eta_withJEC[naJets]/F");
+  _outTree->Branch("aJet_phi_withJEC",  aJets.phi_withJEC,			"phi_withJEC[naJets]/F");
+  _outTree->Branch("aJet_e_withJEC",    aJets.e_withJEC,			"e_withJEC[naJets]/F");
+  _outTree->Branch("aJet_pt_bestMC",	  aJets.pt_bestMC,			"pt_bestMC[naJets]/F");
+  _outTree->Branch("aJet_eta_bestMC",	  aJets.eta_bestMC,			"eta_bestMC[naJets]/F");
+  _outTree->Branch("aJet_phi_bestMC",	  aJets.phi_bestMC,			"phi_bestMC[naJets]/F");
+  _outTree->Branch("aJet_e_bestMC",	  aJets.e_bestMC,			"e_bestMC[naJets]/F");
+  _outTree->Branch("aJet_bestMCid",	  aJets.bestMCid,                       "bestMCid[naJets]/I");
+
+  _outTree->Branch("aJet_jp",			aJets.jp, 			"jp[naJets]/F");
+  _outTree->Branch("aJet_jpb",			aJets.jpb, 			"jpb[naJets]/F");
+  _outTree->Branch("aJet_csv",			aJets.csv, 			"csv[naJets]/F");
+  _outTree->Branch("aJet_csv_nominal",	        aJets.csv_nominal, 		"csv_nominal[naJets]/F");
+  _outTree->Branch("aJet_csv_upBC",		aJets.csv_upBC, 		"csv_upBC[naJets]/F");
   _outTree->Branch("aJet_csv_downBC",		aJets.csv_downBC, 		"csv_downBC[naJets]/F");
   _outTree->Branch("aJet_csv_upL",		aJets.csv_upL, 			"csv_upL[naJets]/F");
-  _outTree->Branch("aJet_csv_downL",		aJets.csv_downL, 			"csv_downL[naJets]/F");
+  _outTree->Branch("aJet_csv_downL",		aJets.csv_downL, 		"csv_downL[naJets]/F");
   _outTree->Branch("aJet_csv_nominal4p",	aJets.csv_nominal4p, 		"csv_nominal4p[naJets]/F");
   _outTree->Branch("aJet_csv_upBC4p",		aJets.csv_upBC4p, 		"csv_upBC4p[naJets]/F");
-  _outTree->Branch("aJet_csv_downBC4p",	aJets.csv_downBC4p, 		"csv_downBC4p[naJets]/F");
-  _outTree->Branch("aJet_csv_nominal1Bin",aJets.csv_nominal1Bin, 	"csv_nominal1Bin[naJets]/F");
-  _outTree->Branch("aJet_csvivf",			aJets.csvivf, 			"csvivf[naJets]/F");
-  _outTree->Branch("aJet_cmva",			aJets.cmva, 				"cmva[naJets]/F");
-  _outTree->Branch("aJet_cosTheta",		aJets.cosTheta, 			"cosTheta[naJets]/F");
-  _outTree->Branch("aJet_numTracksSV",	aJets.numTracksSV, 		"numTracksSV[naJets]/I");
+  _outTree->Branch("aJet_csv_downBC4p",	        aJets.csv_downBC4p, 		"csv_downBC4p[naJets]/F");
+  _outTree->Branch("aJet_csv_nominal1Bin",      aJets.csv_nominal1Bin, 	        "csv_nominal1Bin[naJets]/F");
+  _outTree->Branch("aJet_csvivf",		aJets.csvivf, 			"csvivf[naJets]/F");
+  _outTree->Branch("aJet_cmva",			aJets.cmva, 			"cmva[naJets]/F");
+  _outTree->Branch("aJet_cosTheta",		aJets.cosTheta, 		"cosTheta[naJets]/F");
+  _outTree->Branch("aJet_numTracksSV",	        aJets.numTracksSV, 		"numTracksSV[naJets]/I");
   _outTree->Branch("aJet_chf",			aJets.chf, 				"chf[naJets]/F");
   _outTree->Branch("aJet_nhf",			aJets.nhf, 				"nhf[naJets]/F");
   _outTree->Branch("aJet_cef",			aJets.cef, 				"cef[naJets]/F");
@@ -1614,14 +1671,15 @@ int main(int argc, char* argv[])
   _outTree->Branch("aJet_selectedTauDR",  aJets.selectedTauDR ,"selectedTauDR[naJets]/F");
  
 //===================
-
+//===NOTE : remove jetFat (Duong 10-11-2015)===
   _outTree->Branch("naJetsFat",  	&naJetsFat,		"naJetsFat/I"		);
+/*
   _outTree->Branch("aJetFat_pt",	aJetsFat.pt,	"pt[naJetsFat]/F"	);
   _outTree->Branch("aJetFat_eta",	aJetsFat.eta,	"eta[naJetsFat]/F"	);
   _outTree->Branch("aJetFat_phi",	aJetsFat.phi,	"phi[naJetsFat]/F"	);
   _outTree->Branch("aJetFat_e",		aJetsFat.e,	"e[naJetsFat]/F"	);
   _outTree->Branch("aJetFat_csv",	aJetsFat.csv,	"csv[naJetsFat]/F"	);
-
+*/
   _outTree->Branch("numJets",  		  &numJets,  		"numJets/I"       	);                
   _outTree->Branch("numBJets",		  &numBJets,  		"numBJets/I"       	);                
   _outTree->Branch("deltaPullAngle",  &deltaPullAngle,  "deltaPullAngle/F"	);
@@ -2136,6 +2194,10 @@ int main(int argc, char* argv[])
       const std::vector<VHbbCandidate> * candW ;
       VHbbEvent modifiedEvent;
       const VHbbEvent *  iEvent =0;
+      
+      std::vector<TLorentzVector> jetWithJEC_p4_vec ;
+      std::vector<TLorentzVector> jetBestMC_p4_vec ;
+      std::vector<int> bestMCid_vec ;
       if(fromCandidate) //fromCandiate = False
       {
 		fwlite::Handle< std::vector<VHbbCandidate> > vhbbCandHandleZ;
@@ -2173,7 +2235,8 @@ int main(int argc, char* argv[])
 		// 
 		// CODE FOR JEC CORRECTIONS
 		// 
-		
+	
+	
 		if(isMC_)
 		{
 		  iEvent= &modifiedEvent;
@@ -2194,6 +2257,9 @@ int main(int argc, char* argv[])
 			  METtype1diff_sumet -= modifiedEvent.simpleJets2[j].p4.Et();
 			}
 			modifiedEvent.simpleJets2[j] = jec.correct( modifiedEvent.simpleJets2[j],aux.puInfo.rho,true); 
+                        jetWithJEC_p4_vec.push_back(modifiedEvent.simpleJets2[j].p4) ;
+                        jetBestMC_p4_vec.push_back(modifiedEvent.simpleJets2[j].bestMCp4) ;
+                        bestMCid_vec.push_back(modifiedEvent.simpleJets2[j].bestMCid) ;
 			//std::cout << "Original " << orig.p4.Pt() << " == " << origRemade.p4.Pt() << " using CHS2011 " << corr2011.p4.Pt() << " final: " << modifiedEvent.simpleJets2[j].p4.Pt() << std::endl;
 			if (modifiedEvent.simpleJets2[j].p4.Pt() > METtype1diff_type1JetPtThreshold && (modifiedEvent.simpleJets2[j].chargedEmEFraction+modifiedEvent.simpleJets2[j].neutralEmEFraction) < METtype1diff_skipEMfractionThreshold)
 			{
@@ -2201,9 +2267,10 @@ int main(int argc, char* argv[])
 			  METtype1diff_mey -= modifiedEvent.simpleJets2[j].p4.Py();
 			  METtype1diff_sumet += modifiedEvent.simpleJets2[j].p4.Et();
 			}
+//===resolution smearing MC jet==
 			TLorentzVector & p4 = modifiedEvent.simpleJets2[j].p4; 
 			TLorentzVector & mcp4 = modifiedEvent.simpleJets2[j].bestMCp4;
-			if ((fabs(p4.Pt() - mcp4.Pt())/ p4.Pt())<0.5)
+                        if ((fabs(p4.Pt() - mcp4.Pt())/ p4.Pt())<0.5)
 			{ //Limit the effect to the core 
 			  float cor = (p4.Pt()+resolutionBias(fabs(p4.Eta()))*(p4.Pt()-mcp4.Pt()))/p4.Pt();
 			  p4.SetPtEtaPhiE(p4.Pt()*cor,p4.Eta(), p4.Phi(), p4.E()*cor);
@@ -2227,7 +2294,10 @@ int main(int argc, char* argv[])
 			  METtype1diff_mey += modifiedEvent.simpleJets2[j].p4.Py();
 			  METtype1diff_sumet -= modifiedEvent.simpleJets2[j].p4.Et();
 			}
-			modifiedEvent.simpleJets2[j] = jec.correct( modifiedEvent.simpleJets2[j],aux.puInfo.rho,false); 
+			modifiedEvent.simpleJets2[j] = jec.correct( modifiedEvent.simpleJets2[j],aux.puInfo.rho,false);                        jetWithJEC_p4_vec.push_back(modifiedEvent.simpleJets2[j].p4) ;
+                        jetBestMC_p4_vec.push_back(modifiedEvent.simpleJets2[j].bestMCp4) ;
+                        bestMCid_vec.push_back(modifiedEvent.simpleJets2[j].bestMCid) ;
+
 			if (modifiedEvent.simpleJets2[j].p4.Pt() > METtype1diff_type1JetPtThreshold && (modifiedEvent.simpleJets2[j].chargedEmEFraction+modifiedEvent.simpleJets2[j].neutralEmEFraction) < METtype1diff_skipEMfractionThreshold)
 			{
 			  METtype1diff_mex -= modifiedEvent.simpleJets2[j].p4.Px();
@@ -2340,7 +2410,12 @@ int main(int argc, char* argv[])
       // CHANGED: Added loop to store allJets, allMuons, allElectrons info
       allJets.reset();
       nallJets = vhCand.allJets.size();
-      for(int j=0; j<nallJets && j < MAXJ; j++) allJets.set(vhCand.allJets[j],j);
+      int indTmp(-1) ;
+      if (vhCand.allJets.size() != vhCand.allJets_oriInd.size()) cout << "\n allJets != allJets_oriInd " ;
+      for(int j=0; j<nallJets && j < MAXJ; j++) {
+        indTmp = vhCand.allJets_oriInd[j] ;
+        allJets.set(vhCand.allJets[j],j,jetWithJEC_p4_vec[indTmp], jetBestMC_p4_vec[indTmp], iEvent->simpleJets2[indTmp].bestMCid);
+      }
  
       allMuons.reset();
       nallMuons = vhCand.V.muons.size();
@@ -2379,7 +2454,7 @@ int main(int argc, char* argv[])
 
 		//if(vhCand.FatH.FatHiggsFlag)  vhCand.FatH.subjetsSize; 
         nfathFilterJets=vhCand.FatH.subjetsSize;  
-		for( int j=0; j < nfathFilterJets; j++ ) fathFilterJets.set(vhCand.FatH.jets[j],j);
+		for( int j=0; j < nfathFilterJets; j++ ) fathFilterJets.set(vhCand.FatH.jets[j],j, vhCand.FatH.jets[j].p4, vhCand.FatH.jets[j].p4, -99); //==TODO : need to use correct jetWithJEC and jetWithMC and bestMCid
 
 		if(nfathFilterJets==2)
 		{
@@ -2402,7 +2477,7 @@ int main(int argc, char* argv[])
 		}
 
 		naJetsFat=vhCand.additionalJetsFat.size();
-		for( int j=0; j < naJetsFat && j < MAXJ; j++ ) aJetsFat.set(vhCand.additionalJetsFat[j],j);
+		for( int j=0; j < naJetsFat && j < MAXJ; j++ ) aJetsFat.set(vhCand.additionalJetsFat[j],j, vhCand.additionalJetsFat[j].p4, vhCand.additionalJetsFat[j].p4, -99); //==TODO : need use correct jetWithJEC and jetBestMC and bestMCid
 
       } // FatHiggsFlag
 
@@ -2415,8 +2490,8 @@ int main(int argc, char* argv[])
       if(vhCand.H.HiggsFlag)
 	  {
 		nhJets=2;
-		hJets.set(vhCand.H.jets[0],0);
-		hJets.set(vhCand.H.jets[1],1);
+		hJets.set(vhCand.H.jets[0],0,vhCand.H.jets[0].p4,vhCand.H.jets[0].p4,-99) ; //==TODO : need to use correct jetWithJEC and jetBestMC
+		hJets.set(vhCand.H.jets[1],1,vhCand.H.jets[1].p4,vhCand.H.jets[1].p4,-99);
 
 		VtypeWithTau=vhCand.candidateTypeWithTau;
 //		aJets.reset();
@@ -3252,7 +3327,8 @@ int main(int argc, char* argv[])
 
       }//HiggsFlag
       } //end if has a Z candidate
-   
+
+//==NOTE : iEvent is modified with jet correction, resolution seamering applied== 
       nalep=0;
       aLeptons.reset();
       int doBelongToVhCand(0) ;
@@ -3282,7 +3358,7 @@ int main(int argc, char* argv[])
       naJets = 0 ;
       for(unsigned j=0 ; j < iEvent->simpleJets2.size() ; ++j) {
         if (iEvent->simpleJets2[j].p4.Pt() > 20 && fabs(iEvent->simpleJets2[j].p4.Eta()) < 3) {
-          aJets.set(iEvent->simpleJets2[j],naJets) ;
+          aJets.set(iEvent->simpleJets2[j],naJets, jetWithJEC_p4_vec[j], jetBestMC_p4_vec[j], iEvent->simpleJets2[j].bestMCid) ;
           naJets += 1 ;
         }
       } 
