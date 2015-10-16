@@ -711,6 +711,12 @@ template <> void LeptonInfo::setSpecific<VHbbEvent::TauInfo>(const VHbbEvent::Ta
 
 typedef struct 
 {
+  void reset() {
+    et = -100 ;
+    sumet = -100 ;
+    sig = -100 ;
+    phi = -100 ;
+  }
   float et; 
   float sumet;   
   float sig;
@@ -2022,6 +2028,21 @@ int main(int argc, char* argv[])
       hEvent->Fill(1.5) ; //after skip
       
       count->Fill(1.);
+
+//===NOTE : reset all objects which is going to be filled into tree (Duong 10-16-2015)===
+      
+      naJets=0 ;
+      nhJets=0 ;
+      nfathFilterJets=0 ;
+      naJetsFat=0 ;
+      nallJets = 0 ;
+      nallMuons = 0 ;
+      nallElectrons = 0 ;
+      MET.reset() ;
+      pfMET.reset() ;
+      nvlep=0 ;
+      nalep=0 ;
+      nvlepTau=0 ;
 
       //Handle<std::vector< PileupSummaryInfo > >  PupInfo;
       //event.getByLabel(edm::InputTag("addPileupInfo"), PupInfo);

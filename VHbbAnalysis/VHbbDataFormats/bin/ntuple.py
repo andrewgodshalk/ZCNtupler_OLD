@@ -19,7 +19,7 @@ process.fwliteInput = cms.PSet(
 #	'root://xrootd.unl.edu//store/user/lpchbb/dlopes/WZ_Summer12_53X_V42b/dlopes/WZ_TuneZ2star_8TeV_pythia6_tauola/HBB_EDMNtupleV42/9803889241b1fc304f795d3b3875632d//PAT.edm_100_1_4OQ.root',
       # ZZ
 #	'root://xrootd.unl.edu//store/user/lpchbb/dlopes/ZZ_Summer12_53X_V42b/dlopes/ZZ_TuneZ2star_8TeV_pythia6_tauola/HBB_EDMNtupleV42/9803889241b1fc304f795d3b3875632d//PAT.edm_100_1_ASb.root',
-       'file:/eos/uscms/store/user/duong/VHbbTuples/DY/PAT.edm_436_3_pev.root'
+       'file:/eos/uscms/store/user/duong/noreplica/VHbbTuples/DY/PAT.edm_436_3_pev.root'
        #'file:/eos/uscms/store/user/godshalk/noreplica/DYJetsToLL_M-50_TuneZ2Star_8TeV-madgraph-tarball/PAT.edm_126_1_iyd.root'
        #'file:/eos/uscms/store/user/leptonjets/godshalk/SingleMuRun2012B-13Jul2012/PAT.edm_862_1_P5P.root'
     ),
@@ -32,7 +32,7 @@ process.fwliteInput = cms.PSet(
     PUdatafileName 	= cms.string("data_PU_60bins_190456-208686_69.4mb.root"),
     badEventsFileName 	= cms.string("HCALLaser2012AllDatasets.txt"),
     Weight3DfileName 	= cms.string(""),
-    maxEvents   	= cms.int32(-1),                             ## optional
+    maxEvents   	= cms.int32(10),                             ## optional
     runMin  		= cms.int32(-1),
     runMax  		= cms.int32(-1),
     skipEvents   	= cms.int32(0),                             ## optional
