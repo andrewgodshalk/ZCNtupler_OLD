@@ -19,9 +19,17 @@ process.fwliteInput = cms.PSet(
 #	'root://xrootd.unl.edu//store/user/lpchbb/dlopes/WZ_Summer12_53X_V42b/dlopes/WZ_TuneZ2star_8TeV_pythia6_tauola/HBB_EDMNtupleV42/9803889241b1fc304f795d3b3875632d//PAT.edm_100_1_4OQ.root',
       # ZZ
 #	'root://xrootd.unl.edu//store/user/lpchbb/dlopes/ZZ_Summer12_53X_V42b/dlopes/ZZ_TuneZ2star_8TeV_pythia6_tauola/HBB_EDMNtupleV42/9803889241b1fc304f795d3b3875632d//PAT.edm_100_1_ASb.root',
-       'file:/eos/uscms/store/user/duong/noreplica/VHbbTuples/DY/PAT.edm_436_3_pev.root'
+       #'file:/eos/uscms/store/user/duong/noreplica/VHbbTuples/DY/PAT.edm_436_3_pev.root'
+       #'file:/eos/uscms/store/user/duong/noreplica/VHbbTuples/Wjet/PAT.edm_60_1_838.root'
        #'file:/eos/uscms/store/user/godshalk/noreplica/DYJetsToLL_M-50_TuneZ2Star_8TeV-madgraph-tarball/PAT.edm_126_1_iyd.root'
        #'file:/eos/uscms/store/user/leptonjets/godshalk/SingleMuRun2012B-13Jul2012/PAT.edm_862_1_P5P.root'
+       'file:/eos/uscms/store/user/lpcphys/noreplica/duong/VHbbTuples/DYtoEEpowheg/PAT.edm_11_1_jFn.root',
+       'file:/eos/uscms/store/user/lpcphys/noreplica/duong/VHbbTuples/DYtoEEpowheg/PAT.edm_1_1_WTd.root',
+       'file:/eos/uscms/store/user/lpcphys/noreplica/duong/VHbbTuples/DYtoEEpowheg/PAT.edm_2_1_r2a.root',
+       'file:/eos/uscms/store/user/lpcphys/noreplica/duong/VHbbTuples/DYtoEEpowheg/PAT.edm_3_1_bfR.root',
+       'file:/eos/uscms/store/user/lpcphys/noreplica/duong/VHbbTuples/DYtoEEpowheg/PAT.edm_4_1_Sqc.root',
+       'file:/eos/uscms/store/user/lpcphys/noreplica/duong/VHbbTuples/DYtoEEpowheg/PAT.edm_5_1_tWE.root',
+       'file:/eos/uscms/store/user/lpcphys/noreplica/duong/VHbbTuples/DYtoEEpowheg/PAT.edm_6_1_vXJ.root'
     ),
     PUmcfileName2011B	= cms.string("Summer12MCObserved.root"),
     PUdatafileName2011B = cms.string("MyDataPileupHistogramObserved.root"),
@@ -32,7 +40,7 @@ process.fwliteInput = cms.PSet(
     PUdatafileName 	= cms.string("data_PU_60bins_190456-208686_69.4mb.root"),
     badEventsFileName 	= cms.string("HCALLaser2012AllDatasets.txt"),
     Weight3DfileName 	= cms.string(""),
-    maxEvents   	= cms.int32(10),                             ## optional
+    maxEvents   	= cms.int32(1000),                             ## optional
     runMin  		= cms.int32(-1),
     runMax  		= cms.int32(-1),
     skipEvents   	= cms.int32(0),                             ## optional
@@ -74,7 +82,7 @@ for basename in basenamelist:
 #
 
 
-fname = 'Test' + channel + '_MC.root'
+fname = '/uscmst1b_scratch/lpc1/lpctrig/duong/Tmp/Test' + channel + '_MC.root'
 
 process.fwliteOutput = cms.PSet(
     fileName  = cms.string(fname),	## mandatory
@@ -143,6 +151,7 @@ process.Analyzer = cms.PSet(
         "HLT_Mu17_Ele8_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v.*",
     ),
     isMC 		= cms.bool(True),
+    doFillMoreMCtruth = cms.bool(True), #for MC truth Z decay and genJets
     verbose 		= cms.bool(False),
     readFromCandidates 	= cms.bool(False),
     jetPtThresholdZ 	= cms.double(20),
