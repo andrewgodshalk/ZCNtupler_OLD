@@ -53,6 +53,16 @@
 //Gen particles
 #include "DataFormats/Candidate/interface/Candidate.h"
 
+//GenJet
+#include "SimDataFormats/JetMatching/interface/JetFlavour.h"
+#include "SimDataFormats/JetMatching/interface/JetFlavourMatching.h"
+
+#include "DataFormats/Common/interface/View.h"
+#include "DataFormats/Common/interface/Ref.h"
+#include "DataFormats/Common/interface/getRef.h"
+
+#include "DataFormats/JetReco/interface/Jet.h"
+//#include "DataFormats/JetReco/interface/GenJetCollection.h"
 
 #include <sstream>
 #include <string>
@@ -67,6 +77,8 @@
 #define MAXB 110
 #define MAXT 160
 #define nMetUnc 24 
+#define MAXGENOBJ 20
+
 //eleEnDown/Up, muEn, tauEn, JES, JER, Unclustered for type1 MET [0-11] and than type1p2 MET [12-23]
 
 struct CompareDeltaR
@@ -1010,6 +1022,108 @@ typedef struct
 }
 JetInfo;
 
+//===NOTE : only run on new PAT with genParticles and genJet (Duong 10-20-2015)===
+typedef struct 
+{
+  void reset() {
+    for (int i = 0; i < MAXGENOBJ; i++) {
+    	pt[i] = -100 ;
+        eta[i] = -100 ;
+        phi[i] = -100 ;
+        charge[i] = -100 ;
+        flavor[i] = -100 ;
+        status[i] = -100 ;
+    }
+  }
+  void set(reco::GenParticleRefVector::const_iterator& itr, int i) {
+    pt[i] = (*itr)->pt() ;
+    eta[i] = (*itr)->eta() ;
+    phi[i] = (*itr)->phi() ;
+    charge[i] = (*itr)->charge() ;
+    flavor[i] = (*itr)->pdgId() ;
+    status[i] = (*itr)->status() ;
+  }
+  //void set(reco::JetFlavourMatching& jet, unsigned i) {
+  void set(reco::JetFlavourMatchingCollection::const_iterator& jet, unsigned i) {
+    edm::RefToBase<reco::Jet> aJet  = (*jet).first ;
+    const reco::JetFlavour aFlav = (*jet).second ;
+    pt[i] = aJet.get()->pt() ;
+    eta[i] = aJet.get()->eta() ;
+    phi[i] = aJet.get()->phi() ;
+    charge[i] = aJet.get()->charge() ;
+    flavor[i] = aFlav.getFlavour() ;
+    status[i] = -100 ;
+  }
+  float pt[MAXGENOBJ] ;
+  float eta[MAXGENOBJ] ;
+  float phi[MAXGENOBJ] ;
+  int charge[MAXGENOBJ] ;
+  int flavor[MAXGENOBJ] ;
+  int status[MAXGENOBJ] ;
+}
+GenObjectInfo ; //used to store two leptons from Z, FSR photons and jets
+
+int FindStatus1Lepton(reco::GenParticleRefVector::const_iterator lepIn, reco::GenParticleRefVector::const_iterator& lepOut, vector<reco::GenParticleRefVector::const_iterator>& phoItrs) {
+  int status = (*lepIn)->status() ;
+  int pdgId = (*lepIn)->pdgId() ;
+  if (status == 1) {
+    lepOut = lepIn ;
+    return 1 ; //found 
+  }
+  else if (status == 2) {
+    //===loop over daughter to find photon and status 1 lepton===
+    //+ if status 1 lepton with the same flavor found return the leptOut==
+    //+ if status 1 lepton with different flavor found for tau case return the leptOut==
+    //+ if status 2 with same flavor found feed it again to FindStatus1Lepton===
+    //+ other cases return 0
+    const reco::GenParticleRefVector& daughterRefs = (*lepIn)->daughterRefVector();
+    bool nSta1(0) ;
+    bool nSta2(0) ;
+    bool nHadTau(0) ;
+    reco::GenParticleRefVector::const_iterator itrTmp ;
+    for(reco::GenParticleRefVector::const_iterator idr = daughterRefs.begin(); idr!= daughterRefs.end(); ++idr) {
+      int pdgIdTmp = (*idr)->pdgId() ;
+      int statusTmp = (*idr)->status() ;
+      //fill photons
+      if (pdgIdTmp == 22 && statusTmp == 1) phoItrs.push_back(idr) ;
+      //fill electron and muon, not tau case
+      if (abs(pdgId) != 15 && (pdgIdTmp == pdgId) && statusTmp == 1) {
+        lepOut = idr ;
+        nSta1 += 1 ;
+      }
+      //fill electron and muon, tau case
+      if (abs(pdgId) == 15) {
+        if ((abs(pdgIdTmp) == 11 || abs(pdgIdTmp) == 13) && statusTmp == 1) {
+          lepOut = idr ;
+          nSta1 += 1 ;
+        }
+        if (abs(pdgIdTmp) > 18) nHadTau += 1 ; //hadronic tau decay found
+      } 
+      if (pdgIdTmp == pdgId && statusTmp == 2) { //status 2 with same flavor found
+        itrTmp = idr ;
+        nSta2 +=1 ;
+      }
+    } //end loop over daughter
+    if (nHadTau == 0 && ((nSta1 == 0 && nSta2 == 0) || (nSta1 == 1 && nSta2 == 1) || nSta1 > 1 || nSta2 > 1)) { 
+      cout << "\n Warning: found " << nSta1 << " status  1 particles and " << nSta2 << " status 2 particles. Odd case, exit " << pdgId << "  " << status ; 
+      for(reco::GenParticleRefVector::const_iterator idr = daughterRefs.begin(); idr!= daughterRefs.end(); ++idr) {
+        int pdgIdTmp = (*idr)->pdgId() ;
+        int statusTmp = (*idr)->status() ;
+        cout << "\n Daughter " << pdgIdTmp << "  " << statusTmp ;
+      }
+      return 0 ; 
+    }
+    if (nSta1 == 1) return 1 ; //==note lepOut and photon already set inside particle loop
+    if (nSta2 == 1) {
+      return FindStatus1Lepton(itrTmp, lepOut, phoItrs) ;
+    }
+  } //end else if (status ==2
+  else {
+    cout << "\n Warning: It is not status 1 or status 2 particle, exit" ;
+    return 0 ;
+  }
+  return 0 ;
+}
 
 ///------------THE MAIN FUNCTION!!!--------------///
 int main(int argc, char* argv[]) 
@@ -1052,9 +1166,17 @@ int main(int argc, char* argv[])
   int        nallJets = 0;
   int        nallMuons = 0, nallElectrons = 0;
   METInfo    pfMET;
-  //---------------------------------------//
-  //--------INFO ADDED 2015-10-06----------//
+  
+  //====NOTE : some gen information stuffs (Duong 10-21-2015) ====
   int zdecayMode(0) ;
+  GenObjectInfo genLeps, genPhos ; //==NOTE lep and photon status = 1
+  int nGenLep(0), nGenPho(0) ; 
+  GenObjectInfo genSta3objs ; //===Status 3 leptons (from Z) and partons===
+  int nGenSta3obj(0) ;
+  GenObjectInfo genAk5Jets ;
+  int nGenAk5Jet(0) ;
+  GenObjectInfo genPatPFjets ;
+  int nGenPatPFjet(0) ;
 
   HiggsInfo H,SVH,SimBsH;
   FatHiggsInfo FatH;
@@ -1268,6 +1390,7 @@ int main(int argc, char* argv[])
     //}
   }
 
+  bool doFillMoreMCtruth = ana.getParameter<bool> ("doFillMoreMCtruth") ; 
 
   //
   // CREATE OUTPUT FILE, ADD A TREE, ADD BRANCHES TO TREE.
@@ -1494,12 +1617,12 @@ int main(int argc, char* argv[])
   _outTree->Branch("allJet_vtxProb",        allJets.vtxProb,            "vtxProb[nallJets]/F");
   _outTree->Branch("allJet_ssvhe",          allJets.ssvhe,              "ssvhe[nallJets]/F");
   _outTree->Branch("allJet_id",				allJets.id, 				"id[nallJets]/b");
-  _outTree->Branch("allJet_SF_CSVL",		allJets.SF_CSVL, 			"SF_CSVL[nallJets]/b");
-  _outTree->Branch("allJet_SF_CSVM",		allJets.SF_CSVM, 			"SF_CSVM[nallJets]/b");
-  _outTree->Branch("allJet_SF_CSVT",		allJets.SF_CSVT, 			"SF_CSVT[nallJets]/b");
-  _outTree->Branch("allJet_SF_CSVLerr",		allJets.SF_CSVLerr, 		"SF_CSVLerr[nallJets]/b");
-  _outTree->Branch("allJet_SF_CSVMerr",		allJets.SF_CSVMerr, 		"SF_CSVMerr[nallJets]/b");
-  _outTree->Branch("allJet_SF_CSVTerr",     allJets.SF_CSVTerr,         "SF_CSVTerr[nallJets]/b");
+  _outTree->Branch("allJet_SF_CSVL",		allJets.SF_CSVL, 			"SF_CSVL[nallJets]/F");
+  _outTree->Branch("allJet_SF_CSVM",		allJets.SF_CSVM, 			"SF_CSVM[nallJets]/F");
+  _outTree->Branch("allJet_SF_CSVT",		allJets.SF_CSVT, 			"SF_CSVT[nallJets]/F");
+  _outTree->Branch("allJet_SF_CSVLerr",		allJets.SF_CSVLerr, 		"SF_CSVLerr[nallJets]/F");
+  _outTree->Branch("allJet_SF_CSVMerr",		allJets.SF_CSVMerr, 		"SF_CSVMerr[nallJets]/F");
+  _outTree->Branch("allJet_SF_CSVTerr",     allJets.SF_CSVTerr,         "SF_CSVTerr[nallJets]/F");
   _outTree->Branch("allJet_tche",           allJets.tche,               "tche[nallJets]/F");
   _outTree->Branch("allJet_tchp",           allJets.tchp,               "tchp[nallJets]/F");
   _outTree->Branch("allJet_vtxPosition_x",  allJets.vtxPosition_x,      "vtxPosition_x[nallJets]/F");
@@ -1663,12 +1786,12 @@ int main(int argc, char* argv[])
   _outTree->Branch("aJet_vtxProb",        aJets.vtxProb,            "vtxProb[naJets]/F");
   _outTree->Branch("aJet_ssvhe",          aJets.ssvhe,              "ssvhe[naJets]/F");
   _outTree->Branch("aJet_id",				aJets.id, 				"id[naJets]/b");
-  _outTree->Branch("aJet_SF_CSVL",		aJets.SF_CSVL, 			"SF_CSVL[naJets]/b");
-  _outTree->Branch("aJet_SF_CSVM",		aJets.SF_CSVM, 			"SF_CSVM[naJets]/b");
-  _outTree->Branch("aJet_SF_CSVT",		aJets.SF_CSVT, 			"SF_CSVT[naJets]/b");
-  _outTree->Branch("aJet_SF_CSVLerr",		aJets.SF_CSVLerr, 		"SF_CSVLerr[naJets]/b");
-  _outTree->Branch("aJet_SF_CSVMerr",		aJets.SF_CSVMerr, 		"SF_CSVMerr[naJets]/b");
-  _outTree->Branch("aJet_SF_CSVTerr",     aJets.SF_CSVTerr,         "SF_CSVTerr[naJets]/b");
+  _outTree->Branch("aJet_SF_CSVL",		aJets.SF_CSVL, 			"SF_CSVL[naJets]/F");
+  _outTree->Branch("aJet_SF_CSVM",		aJets.SF_CSVM, 			"SF_CSVM[naJets]/F");
+  _outTree->Branch("aJet_SF_CSVT",		aJets.SF_CSVT, 			"SF_CSVT[naJets]/F");
+  _outTree->Branch("aJet_SF_CSVLerr",		aJets.SF_CSVLerr, 		"SF_CSVLerr[naJets]/F");
+  _outTree->Branch("aJet_SF_CSVMerr",		aJets.SF_CSVMerr, 		"SF_CSVMerr[naJets]/F");
+  _outTree->Branch("aJet_SF_CSVTerr",     aJets.SF_CSVTerr,         "SF_CSVTerr[naJets]/F");
   _outTree->Branch("aJet_tche",           aJets.tche,               "tche[naJets]/F");
   _outTree->Branch("aJet_tchp",           aJets.tchp,               "tchp[naJets]/F");
   _outTree->Branch("aJet_vtxPosition_x",  aJets.vtxPosition_x,      "vtxPosition_x[naJets]/F");
@@ -1977,8 +2100,45 @@ int main(int argc, char* argv[])
   _outTree->Branch("btagA0TSF"	,  &btagA0TSF	         ,   "btagA0TSF/F");
   _outTree->Branch("btag1TA1C"	,  &btag1TA1C	         ,   "btag1TA1C/F");
 
+//==NOTE : some gen info stuffs (Duong 10-21-2015)==
   _outTree->Branch("zdecayMode",    			&zdecayMode,				"zdecayMode/I"    );
-  
+  _outTree->Branch("nGenLep",    			&nGenLep,				"nGenLep/I"    );
+  _outTree->Branch("nGenPho",    			&nGenPho,				"nGenPho/I"    );
+  _outTree->Branch("nGenSta3obj",    			&nGenSta3obj,				"nGenSta3obj/I"    );
+  _outTree->Branch("nGenAk5Jet",    			&nGenAk5Jet,				"nGenAk5Jet/I"    );
+  _outTree->Branch("nGenPatPFjet",    			&nGenPatPFjet,				"nGenPatPFjet/I"    );
+//==TODO: add mass or energy so that we can build the 4 vector==
+  _outTree->Branch("genLep_pt", genLeps.pt, "genLep_pt[nGenLep]/F") ;  
+  _outTree->Branch("genLep_eta", genLeps.eta, "genLep_eta[nGenLep]/F") ;  
+  _outTree->Branch("genLep_phi", genLeps.phi, "genLep_phi[nGenLep]/F") ;  
+  _outTree->Branch("genLep_charge", genLeps.charge, "genLep_charge[nGenLep]/I") ;  
+  _outTree->Branch("genLep_flavor", genLeps.flavor, "genLep_flavor[nGenLep]/I") ;  
+  _outTree->Branch("genLep_status", genLeps.status, "genLep_status[nGenLep]/I") ;  
+  _outTree->Branch("genPho_pt", genPhos.pt, "genPho_pt[nGenPho]/F") ;  
+  _outTree->Branch("genPho_eta", genPhos.eta, "genPho_eta[nGenPho]/F") ;  
+  _outTree->Branch("genPho_phi", genPhos.phi, "genPho_phi[nGenPho]/F") ;  
+  _outTree->Branch("genPho_charge", genPhos.charge, "genPho_charge[nGenPho]/I") ;  
+  _outTree->Branch("genPho_flavor", genPhos.flavor, "genPho_flavor[nGenPho]/I") ;  
+  _outTree->Branch("genPho_status", genPhos.status, "genPho_status[nGenPho]/I") ;  
+  _outTree->Branch("genSta3obj_pt", genSta3objs.pt, "genSta3obj_pt[nGenSta3obj]/F") ;  
+  _outTree->Branch("genSta3obj_eta", genSta3objs.eta, "genSta3obj_eta[nGenSta3obj]/F") ;  
+  _outTree->Branch("genSta3obj_phi", genSta3objs.phi, "genSta3obj_phi[nGenSta3obj]/F") ;  
+  _outTree->Branch("genSta3obj_charge", genSta3objs.charge, "genSta3obj_charge[nGenSta3obj]/I") ;  
+  _outTree->Branch("genSta3obj_flavor", genSta3objs.flavor, "genSta3obj_flavor[nGenSta3obj]/I") ;  
+  _outTree->Branch("genSta3obj_status", genSta3objs.status, "genSta3obj_status[nGenSta3obj]/I") ;  
+  _outTree->Branch("genAk5Jet_pt", genAk5Jets.pt, "genAk5Jet_pt[nGenAk5Jet]/F") ;  
+  _outTree->Branch("genAk5Jet_eta", genAk5Jets.eta, "genAk5Jet_eta[nGenAk5Jet]/F") ;  
+  _outTree->Branch("genAk5Jet_phi", genAk5Jets.phi, "genAk5Jet_phi[nGenAk5Jet]/F") ;  
+  _outTree->Branch("genAk5Jet_charge", genAk5Jets.charge, "genAk5Jet_charge[nGenAk5Jet]/I") ;  
+  _outTree->Branch("genAk5Jet_flavor", genAk5Jets.flavor, "genAk5Jet_flavor[nGenAk5Jet]/I") ;  
+  _outTree->Branch("genAk5Jet_status", genAk5Jets.status, "genAk5Jet_status[nGenAk5Jet]/I") ;  
+  _outTree->Branch("genPatPFjet_pt", genPatPFjets.pt, "genPatPFjet_pt[nGenPatPFjet]/F") ;  
+  _outTree->Branch("genPatPFjet_eta", genPatPFjets.eta, "genPatPFjet_eta[nGenPatPFjet]/F") ;  
+  _outTree->Branch("genPatPFjet_phi", genPatPFjets.phi, "genPatPFjet_phi[nGenPatPFjet]/F") ;  
+  _outTree->Branch("genPatPFjet_charge", genPatPFjets.charge, "genPatPFjet_charge[nGenPatPFjet]/I") ;  
+  _outTree->Branch("genPatPFjet_flavor", genPatPFjets.flavor, "genPatPFjet_flavor[nGenPatPFjet]/I") ;  
+  _outTree->Branch("genPatPFjet_status", genPatPFjets.status, "genPatPFjet_status[nGenPatPFjet]/I") ; 
+
   int ievt=0;  
   int totalcount=0;
 
@@ -2029,6 +2189,8 @@ int main(int argc, char* argv[])
       
       count->Fill(1.);
 
+
+
 //===NOTE : reset all objects which is going to be filled into tree (Duong 10-16-2015)===
       
       naJets=0 ;
@@ -2040,6 +2202,15 @@ int main(int argc, char* argv[])
       nallElectrons = 0 ;
       MET.reset() ;
       pfMET.reset() ;
+      fakeMET.reset() ;
+      METnoPU.reset() ;
+      METnoPUCh.reset() ;
+      METtype1corr.reset() ;
+      METtype1p2corr.reset() ;
+      METnoPUtype1corr.reset() ;
+      METnoPUtype1p2corr.reset() ;
+      METtype1diff.reset() ;
+
       nvlep=0 ;
       nalep=0 ;
       nvlepTau=0 ;
@@ -2377,6 +2548,9 @@ int main(int argc, char* argv[])
 	
       genHpt=aux.mcH.size() > 0 ? aux.mcH[0].p4.Pt():-99;
 
+      trigger.setEvent(&ev);
+      for(size_t j=0;j < triggers.size();j++) triggerFlags[j]=trigger.accept(triggers[j]);
+
 //==NOTE : bypass the filter basing on the existence of Z candidate (Duong 10-08-2015)
       //if(cand->size() == 0 ) continue;
       if (cand->size() > 0) {
@@ -2409,10 +2583,11 @@ int main(int argc, char* argv[])
       cschaloFlag   		= patFilters.accept("cschaloFilter");   
       hcallaserFlag   		= patFilters.accept("hcallaserFilter");   
       trackingfailureFlag 	= patFilters.accept("trackingfailureFilter");   
-      eebadscFlag     		= patFilters.accept("eebadscFilter");   
-
-      trigger.setEvent(&ev);
-      for(size_t j=0;j < triggers.size();j++) triggerFlags[j]=trigger.accept(triggers[j]);
+      eebadscFlag     		= patFilters.accept("eebadscFilter");
+   
+//===NOTE move trigger flag out of Z candidate finding (Duong Nov. 3, 2015) ===
+//      trigger.setEvent(&ev);
+//      for(size_t j=0;j < triggers.size();j++) triggerFlags[j]=trigger.accept(triggers[j]);
 
       eventFlav=0;
 
@@ -2553,10 +2728,14 @@ int main(int argc, char* argv[])
 	  }
 
 	  // METInfo calomet;  METInfo tcmet;  METInfo pfmet;  METInfo mht;  METInfo metNoPU
+	  //
+	  //====pfMETtype1corr with some filter but currently don't apply see HbbCandidateFinderAlgo.cc findMET()
       MET.et = vhCand.V.mets.at(0).p4.Pt();
       MET.phi = vhCand.V.mets.at(0).p4.Phi();
       MET.sumet = vhCand.V.mets.at(0).sumEt;
       MET.sig = vhCand.V.mets.at(0).metSig;
+      
+      //====raw MET===
       pfMET.et    = iEvent->pfmet.p4.Pt();
       pfMET.phi   = iEvent->pfmet.p4.Phi();
       pfMET.sumet = iEvent->pfmet.sumEt;
@@ -3384,6 +3563,8 @@ int main(int argc, char* argv[])
         }
       } 
       
+      aMET.reset() ;
+      apfMET.reset() ; 
       aMET.et = iEvent->pfmetType1corr.p4.Pt();
       aMET.phi = iEvent->pfmetType1corr.p4.Phi();
       aMET.sumet = iEvent->pfmetType1corr.sumEt;
@@ -3393,32 +3574,219 @@ int main(int argc, char* argv[])
       apfMET.sumet = iEvent->pfmet.sumEt;
       apfMET.sig   = iEvent->pfmet.metSig;
       
-      if(isMC_) {  
+      if(isMC_ && doFillMoreMCtruth) {  
 //==fill gen particle from Z+ll==
+//Z(3)->ll(3)->ll(2)->X(1): with photon radiation, Z(3)->ll(3)->X(1) no photon radiation
       fwlite::Handle<std::vector<reco::GenParticle> > genPartH ;
-      genPartH.getByLabel(ev,"savedGenParticles");
-      //genPartH.getByLabel(ev,"genParticles");
+      //genPartH.getByLabel(ev,"savedGenParticles");
+      genPartH.getByLabel(ev,"genParticles");
       std::vector<reco::GenParticle> genPartV = *(genPartH.product());
 //==find Z particle==
+      zdecayMode = 0 ;
       int pdgId(0) ;
       int status(-10) ;
+      vector<reco::GenParticleRefVector::const_iterator> lepRefItrs ; //status 3 lepton from Z decays
+      vector<int> zPartInds ;
       for (unsigned i = 0; i < genPartV.size(); i++) {
         pdgId = genPartV[i].pdgId() ;
         status = genPartV[i].status() ;
         if (pdgId == 23 && status == 3) {
           const reco::GenParticleRefVector& daughterRefs = genPartV[i].daughterRefVector();
+          zPartInds.push_back(i) ;
           //cout << "\n ===================" ;
           for(reco::GenParticleRefVector::const_iterator idr = daughterRefs.begin(); idr!= daughterRefs.end(); ++idr) {
             //cout<<"    - Daughter "<<(*idr).key()<<" "<<(*idr)->pdgId()<<endl;
-            if (abs((*idr)->pdgId()) == 11) { zdecayMode = 1 ; break ;} 
-            if (abs((*idr)->pdgId()) == 13) { zdecayMode = 2 ; break ;} 
-            if (abs((*idr)->pdgId()) == 15) { zdecayMode = 3 ; break ;} 
+            //if (abs((*idr)->pdgId()) == 11) { zdecayMode = 1 ; break ;} 
+            //if (abs((*idr)->pdgId()) == 13) { zdecayMode = 2 ; break ;} 
+            //if (abs((*idr)->pdgId()) == 15) { zdecayMode = 3 ; break ;} 
+            int pdgIdAbs = abs((*idr)->pdgId()) ;
+            if ( pdgIdAbs == 11 || pdgIdAbs == 13 || pdgIdAbs == 15 ) lepRefItrs.push_back(idr) ; 
+            if (abs((*idr)->pdgId()) == 11) { zdecayMode = 1 ; } 
+            if (abs((*idr)->pdgId()) == 13) { zdecayMode = 2 ; } 
+            if (abs((*idr)->pdgId()) == 15) { zdecayMode = 3 ; } 
           }
 
           break ;
 
         }
+      
+      } //end loop over genParticle
+      
+      //===get daughters of lepton meaning lepton with status 2 particle===
+      vector<reco::GenParticleRefVector::const_iterator> lepDauItrs ;
+      if (lepRefItrs.size() != 2) cout << "\n Warning: not a Z->ll" ;
+      if (lepRefItrs.size() == 2) {
+        //lepDaughter with status == 2
+         //cout << "\n Two leptons from Z are: " << (*lepRefItrs[0])->pdgId() << "  " << (*lepRefItrs[0])->status() << "  " << (*lepRefItrs[1])->pdgId() << "  " << (*lepRefItrs[1])->status() ;
+         if (((*lepRefItrs[0])->daughterRefVector()).size() == 1) lepDauItrs.push_back(((*lepRefItrs[0])->daughterRefVector()).begin()) ;
+         else cout << "\n Warning: there are " << ((*lepRefItrs[0])->daughterRefVector()).size() << " daughters for first lepton  " << (*lepRefItrs[0])->pdgId() << "  " << (*lepRefItrs[0])->status() ;  
+         if (((*lepRefItrs[1])->daughterRefVector()).size() != 0) lepDauItrs.push_back(((*lepRefItrs[1])->daughterRefVector()).begin()) ;
+         else cout << "\n Warning: there are " << ((*lepRefItrs[1])->daughterRefVector()).size() << " daughters for second lepton  " << (*lepRefItrs[1])->pdgId() << "  " << (*lepRefItrs[1])->status() ;  
       }
+      
+      //===fill leptons and photons with status == 1
+      nGenLep = 0 ;
+      genLeps.reset() ; 
+      nGenPho = 0 ;
+      genPhos.reset() ;
+      if (lepDauItrs.size() == 2) {
+        reco::GenParticleRefVector::const_iterator lepOut ;
+        vector<reco::GenParticleRefVector::const_iterator> phoItrs ;
+        if (FindStatus1Lepton(lepDauItrs[0], lepOut, phoItrs)) genLeps.set(lepOut,nGenLep++) ;
+        if (FindStatus1Lepton(lepDauItrs[1], lepOut, phoItrs)) genLeps.set(lepOut,nGenLep++) ;
+        for (unsigned iPho = 0 ; iPho < phoItrs.size() ; ++iPho) genPhos.set(phoItrs[iPho],nGenPho++) ;
+      }
+
+/*      
+      if (lepDauItrs.size() == 2) {
+        int status = (*lepDauItrs[0])->status() ;
+        int pdgId = (*lepDauItrs[0])->pdgId() ;
+        //===no photon radiation, status 3 lep -> status 1 lep==
+        if (status == 1) {
+          genLeps.set(lepDauItrs[0],nGenLep++) ;
+        }
+        //===with photon radiation or tau decay, status 3 lep -> status 2 lep====
+        else if (status == 2) {
+          const reco::GenParticleRefVector& particleRefs = (*lepDauItrs[0])->daughterRefVector() ;
+          for(reco::GenParticleRefVector::const_iterator idr = particleRefs.begin(); idr!= particleRefs.end(); ++idr) {
+            int pdgIdAbsTmp = abs((*idr)->pdgId()) ;
+            int statusTmp = (*idr)->status() ;
+            if ((pdgIdAbsTmp == 11 || pdgIdAbsTmp == 13) && statusTmp == 1) { //only store electron and muons
+              genLeps.set(idr,nGenLep++) ;
+            } 
+            else if ((pdgIdAbsTmp == 22) && statusTmp == 1) {
+              genPhos.set(idr,nGenPho++) ;
+            }
+            else {
+              cout << "\n no gen ele, muon, or photon found 0: " << pdgId << "  " << status << "  " << (*idr)->pdgId() << "  " << (*idr)->status() ; 
+            } 
+          }
+        } //end else if (status == 2
+        else {
+          cout << "\n Warning: Unidentified daughter of lepton 0 status" ;
+        }
+
+        status = (*lepDauItrs[1])->status() ;
+        pdgId = (*lepDauItrs[1])->pdgId() ;
+        //===no photon radiation, status 3 lep -> status 1 lep==
+        if (status == 1) {
+          genLeps.set(lepDauItrs[1],nGenLep++) ;
+        }
+        //===with photon radiation or tau decay, status 3 lep -> status 2 lep====
+        else if (status == 2) {
+          const reco::GenParticleRefVector& particleRefs = (*lepDauItrs[1])->daughterRefVector() ;
+          for(reco::GenParticleRefVector::const_iterator idr = particleRefs.begin(); idr!= particleRefs.end(); ++idr) {
+            int pdgIdAbsTmp = abs((*idr)->pdgId()) ;
+            int statusTmp = (*idr)->status() ;
+            if ((pdgIdAbsTmp == 11 || pdgIdAbsTmp == 13) && statusTmp == 1) { //only store electron and muons
+              genLeps.set(idr,nGenLep++) ;
+            } 
+            else if ((pdgIdAbsTmp == 22) && statusTmp == 1) {
+              genPhos.set(idr,nGenPho++) ;
+            }
+            else {
+              cout << "\n no gen ele, muon, or photon found 1: " << pdgId << "  " << status << "  " << (*idr)->pdgId() << "  " << (*idr)->status() ; 
+            } 
+          }
+        } //end else if (status == 2
+        else {
+          cout << "\n Warning: Unidentified daughter of lepton 1 status" ;
+        }
+ 
+      } //end lepDauItrs.size() == 2      
+*/       
+      if (lepDauItrs.size() != 2) cout << "\n Warning: found " << lepDauItrs.size() << " daughter lepton (should be always 2)" ;
+
+//===fill status 3 leptons + partons===
+      nGenSta3obj = 0 ;
+      genSta3objs.reset() ;
+      if (zPartInds.size() != 1) cout << "\n Warning: there are " << zPartInds.size() << " status 3 Z found, weird, will not fill" ;
+      else {
+      const reco::GenParticleRefVector& zMomRefs = genPartV[zPartInds[0]].motherRefVector() ; //mother of Z, neeeded to find Z sibling
+      if (zMomRefs.size() != 2) cout << "\n Warning: there are " << zMomRefs.size() << " mothers of Z, will not fill sibling" ;
+      else {
+        //===fill two leptons status 3===
+        if (lepRefItrs.size() != 2) cout << "\n Warning: odd Z decay, can't find 2 leptons, will not fill sibling" ;
+        else {
+          genSta3objs.set(lepRefItrs[0], nGenSta3obj++) ;
+          genSta3objs.set(lepRefItrs[1], nGenSta3obj++) ;
+        } 
+        //===fill parton siblin with Z===
+        const reco::GenParticleRefVector& daughterRefs = zMomRefs[0]->daughterRefVector() ;
+        const reco::GenParticleRefVector& daughterRef1s = zMomRefs[1]->daughterRefVector() ;
+        bool doPassSameDaughter(true) ;
+        for(reco::GenParticleRefVector::const_iterator idr = daughterRefs.begin(); idr!= daughterRefs.end(); ++idr) {
+          //===check that both moms give the same daughters==
+          int pdgId = (*idr)->pdgId() ;
+          int status = (*idr)->status() ;
+          bool foundIt = false ;
+          for(reco::GenParticleRefVector::const_iterator idr1 = daughterRef1s.begin(); idr1!= daughterRef1s.end(); ++idr1) {
+            
+            int pdgId1 = (*idr1)->pdgId() ;
+            int status1 = (*idr1)->status() ;
+            if (pdgId == pdgId1 && status == status1) {
+              foundIt = true ;
+              break ;
+            }
+          }
+          if (!foundIt) {
+            cout << "\n Warning: two mothers (0 compares to 1) not giving the same daughters, will not fill" ; 
+            doPassSameDaughter = false ;
+            break ;
+          }
+        }
+        
+        for(reco::GenParticleRefVector::const_iterator idr = daughterRef1s.begin(); idr!= daughterRef1s.end(); ++idr) {
+          //===check that both moms give the same daughters==
+          int pdgId = (*idr)->pdgId() ;
+          int status = (*idr)->status() ;
+          bool foundIt = false ;
+          for(reco::GenParticleRefVector::const_iterator idr1 = daughterRefs.begin(); idr1!= daughterRefs.end(); ++idr1) {
+            
+            int pdgId1 = (*idr1)->pdgId() ;
+            int status1 = (*idr1)->status() ;
+            if (pdgId == pdgId1 && status == status1) {
+              foundIt = true ;
+              break ;
+            }
+          }
+          if (!foundIt) {
+            cout << "\n Warning: two mothers (1 compares to 0) not giving the same daughters, will not fill" ; 
+            doPassSameDaughter = false ;
+            break ;
+          }
+        }
+
+        if (doPassSameDaughter) {
+          for(reco::GenParticleRefVector::const_iterator idr = daughterRefs.begin(); idr!= daughterRefs.end(); ++idr) {
+            if ((*idr)->pdgId() != 23) genSta3objs.set(idr, nGenSta3obj++) ;
+          }
+
+        }
+   
+        } //end if zMom size == 2
+           
+ 
+      } //end elseif of zPartInds.size() != 2
+      
+      //===Now fill gen jets====
+      //fwlite::Handle<std::vector<reco::JetFlavourMatching> > genJetH ;
+      fwlite::Handle<reco::JetFlavourMatchingCollection> genJetH ;
+      genJetH.getByLabel(ev,"flavourByVal"); //for ak5GenJet
+      nGenAk5Jet = 0 ;
+      genAk5Jets.reset() ;
+      for ( reco::JetFlavourMatchingCollection::const_iterator j  = genJetH->begin(); j != genJetH->end() && nGenAk5Jet < MAXGENOBJ ; j ++ ) {
+        genAk5Jets.set(j, nGenAk5Jet++);
+      }
+      
+      genJetH.getByLabel(ev,"flavourByVal1"); //for patJetsPFlow
+      nGenPatPFjet = 0 ;
+      genPatPFjets.reset() ;
+      for ( reco::JetFlavourMatchingCollection::const_iterator j  = genJetH->begin(); j != genJetH->end() && nGenPatPFjet < MAXGENOBJ ; j ++ ) {
+        genPatPFjets.set(j, nGenPatPFjet++);
+      }
+
+       
       } //end if (isMC_)
       
       //==NOTE : for data require at least one good lepton = nallElectrons + nallMuons + naLepton (pt > 15 and fabs(eta) < 2.6)== Duong (10-09-2015)
