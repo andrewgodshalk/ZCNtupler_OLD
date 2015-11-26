@@ -776,6 +776,7 @@ typedef struct
   int lumi;
   int event;
   int json;
+  int nMEparts ;
 }
 EventInfo;
 
@@ -937,6 +938,14 @@ typedef struct
       tche[i]=-99;
       tchp[i]=-99;
       vtxProb[i]=-99;
+      vtxMass[i] = -99 ;
+      vtx3dL[i] = -99 ;
+      vtx3deL[i] = -99 ;
+      vtxPt[i] = -99 ;
+      vtxEta[i] = -99 ;
+      vtxPhi[i] = -99 ;
+      vtxE[i] = -99 ;
+      
       ssvhe  [i]=-99;
 	}
   }
@@ -1612,7 +1621,11 @@ int main(int argc, char* argv[])
   _outTree->Branch("allJet_genEta",			allJets.genEta, 			"genEta[nallJets]/F");
   _outTree->Branch("allJet_genPhi",			allJets.genPhi, 			"genPhi[nallJets]/F");
   _outTree->Branch("allJet_JECUnc",			allJets.JECUnc, 			"JECUnc[nallJets]/F");
-  _outTree->Branch("allJet_vtxMass",		allJets.vtxMass, 			"vtxMass[nallJets]/F");
+  _outTree->Branch("allJet_vtxMass",		allJets.vtxMass, 			"vtxMass[nallJets]/F"); 
+  _outTree->Branch("allJet_vtxPt",              allJets.vtxPt ,                         "vtxPt[nallJets]/F");
+  _outTree->Branch("allJet_vtxEta",             allJets.vtxEta ,                        "vtxEta[nallJets]/F");
+  _outTree->Branch("allJet_vtxPhi",             allJets.vtxPhi ,                        "vtxPhi[nallJets]/F");
+  _outTree->Branch("allJet_vtxE",               allJets.vtxE ,                          "vtxE[nallJets]/F");
   _outTree->Branch("allJet_vtx3dL",			allJets.vtx3dL, 			"vtx3dL[nallJets]/F");
   _outTree->Branch("allJet_vtx3deL",		allJets.vtx3deL,	 		"vtx3deL[nallJets]/F");
   _outTree->Branch("allJet_vtxProb",        allJets.vtxProb,            "vtxProb[nallJets]/F");
@@ -1782,6 +1795,10 @@ int main(int argc, char* argv[])
   _outTree->Branch("aJet_genPhi",			aJets.genPhi, 			"genPhi[naJets]/F");
   _outTree->Branch("aJet_JECUnc",			aJets.JECUnc, 			"JECUnc[naJets]/F");
   _outTree->Branch("aJet_vtxMass",		aJets.vtxMass, 			"vtxMass[naJets]/F");
+  _outTree->Branch("aJet_vtxPt",                aJets.vtxPt ,                   "vtxPt[naJets]/F");
+  _outTree->Branch("aJet_vtxEta",               aJets.vtxEta ,                  "vtxEta[naJets]/F");
+  _outTree->Branch("aJet_vtxPhi",               aJets.vtxPhi ,                  "vtxPhi[naJets]/F");
+  _outTree->Branch("aJet_vtxE",                 aJets.vtxE ,                    "vtxE[naJets]/F");
   _outTree->Branch("aJet_vtx3dL",			aJets.vtx3dL, 			"vtx3dL[naJets]/F");
   _outTree->Branch("aJet_vtx3deL",		aJets.vtx3deL,	 		"vtx3deL[naJets]/F");
   _outTree->Branch("aJet_vtxProb",        aJets.vtxProb,            "vtxProb[naJets]/F");
@@ -2086,6 +2103,7 @@ int main(int argc, char* argv[])
   _outTree->Branch("triggerFlags", triggerFlags, s.str().c_str()); 
  
   _outTree->Branch("EVENT"		,  &EVENT	         ,   "run/I:lumi/I:event/I:json/I");
+  _outTree->Branch("nMEparts", &EVENT.nMEparts, "nMEparts/I") ;
   _outTree->Branch("hbhe"		,  &hbhe	         ,   "hbhe/b");
   _outTree->Branch("totalKinematics"		,  &totalKinematics	         ,   "totalKinematics/b");
   _outTree->Branch("ecalFlag"		,  &ecalFlag	         ,   "ecalFlag/b");
@@ -2183,6 +2201,7 @@ int main(int argc, char* argv[])
       weightSignalQCD=1.;
       weightSignalEWK=1.;
 
+
       if(EVENT.run < runMin_ && runMin_ > 0) continue;
       if(EVENT.run > runMax_ && runMax_ > 0) continue;
 
@@ -2193,6 +2212,8 @@ int main(int argc, char* argv[])
 
 
 //===NOTE : reset all objects which is going to be filled into tree (Duong 10-16-2015)===
+      
+      EVENT.nMEparts = -1 ;
       
       naJets=0 ;
       nhJets=0 ;
@@ -2286,8 +2307,10 @@ int main(int argc, char* argv[])
 		lheNj=0;
 		TLorentzVector l,lbar,vl,vlbar,V_tlv;
 		const lhef::HEPEUP hepeup_ = evt->hepeup();
-		const std::vector<lhef::HEPEUP::FiveVector> pup_ = hepeup_.PUP; // px, py, pz, E, M
+		EVENT.nMEparts = hepeup_.NUP ;
 
+		const std::vector<lhef::HEPEUP::FiveVector> pup_ = hepeup_.PUP; // px, py, pz, E, M
+                
 		//################# PDF CODE ##################
 
 		//############# PDF reweighting ##################
@@ -2318,7 +2341,7 @@ int main(int argc, char* argv[])
 
 
           //new pdf set
-        for (unsigned int setpdf=2; setpdf <= pdfNames.size()+1; ++setpdf)
+          for (unsigned int setpdf=2; setpdf <= pdfNames.size()+1; ++setpdf)
 		{
           for(int pdfmember = 0; pdfmember < LHAPDF::numberPDF(setpdf); pdfmember++)
 		  {
